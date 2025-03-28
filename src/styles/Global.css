@@ -1,0 +1,112 @@
+:root {
+    /* Colors from branding guide */
+    --divine-light: #FBFBD7;
+    --royal-red: #660000;
+    --battle-ash: #2E2B2B;
+    --belaklara-gold: #CC9933;
+    --guardian-green: #193B1C;
+    
+    /* Additional UI colors */
+    --text-light: #FBFBD7;
+    --background-dark: #1A1A1A;
+    --panel-background: rgba(46, 43, 43, 0.8);
+  }
+  
+  body {
+    background-color: var(--background-dark);
+    color: var(--text-light);
+    font-family: 'Spectral', serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    overflow-y: auto;
+  }
+  
+  .App {
+    padding: 20px;
+    max-width: 1600px; /* Increased max-width */
+    margin: 0 auto;
+    min-height: calc(100vh - 40px);
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .App-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .App-header h1 {
+    font-family: 'Black Chancery', serif;
+    font-size: 3rem;
+    color: var(--divine-light);
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  button {
+    background-color: var(--royal-red);
+    color: var(--divine-light);
+    border: 2px solid var(--belaklara-gold);
+    padding: 8px 16px;
+    font-family: 'Spectral', serif;
+    font-size: 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #7F0000;
+    transform: translateY(-2px);
+  }
+  
+  button:disabled {
+    background-color: #333;
+    color: #666;
+    border-color: #444;
+    cursor: not-allowed;
+  }
+  
+/* Layout structure */
+.game-layout {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+    min-height: calc(100vh - 120px);
+  }
+  
+  .left-panel {
+    width: 280px;
+    flex-shrink: 0;
+  }
+  
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 120px);
+  }
+  
+  .action-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 900px) {
+    .game-layout {
+      flex-direction: column;
+      height: auto;
+      min-height: 500px;
+    }
+    
+    .left-panel {
+      width: 100%;
+    }
+    
+    .App-header h1 {
+      font-size: 2.5rem;
+    }
+  }

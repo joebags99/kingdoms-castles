@@ -1,0 +1,59 @@
+.board-container {
+  width: 100%;
+  height: 70vh;
+  background-color: var(--battle-ash);
+  border: 2px solid var(--belaklara-gold);
+  border-radius: 8px;
+  padding: 15px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.board-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.board {
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hex {
+  transition: filter 0.3s ease;
+  stroke-width: 1.5;
+}
+
+.hex-group:hover .hex {
+  filter: brightness(1.3);
+  cursor: pointer;
+}
+
+.hex-label {
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.8;
+}
+
+@media (max-height: 700px) {
+  .board-container {
+    height: 60vh;
+  }
+}
+
+@media (max-width: 768px) {
+  .board-container {
+    height: 50vh;
+  }
+}
