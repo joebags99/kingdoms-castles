@@ -16,7 +16,19 @@ const PhaseController: React.FC = () => {
       console.log("Collecting resources as player leaves Resource phase");
     }
     
-    dispatch({ type: 'NEXT_PHASE' });
+    // If we're in Combat phase, wait a moment to allow combat resolution
+    if (state.currentPhase === GamePhase.Combat) {
+      // First dispatch an END_PHASE action (which won't change phases but will resolve combat)
+      dispatch({ type: 'END_COMBAT' });
+      
+      // Then after a short delay, move to the next phase
+      setTimeout(() => {
+        dispatch({ type: 'NEXT_PHASE' });
+      }, 500); // 500ms delay to allow combat to resolve
+    } else {
+      // For other phases, immediately go to the next phase
+      dispatch({ type: 'NEXT_PHASE' });
+    }
   };
   
   // Get a more user-friendly display name for each phase

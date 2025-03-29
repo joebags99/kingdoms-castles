@@ -1,3 +1,6 @@
+/* src/styles/Board.css */
+
+/* ====== Main Board Layout ====== */
 .board-container {
   width: 100%;
   height: 70vh;
@@ -30,6 +33,14 @@
   display: block;
 }
 
+.phase-instructions {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--divine-light);
+  text-align: center;
+}
+
+/* ====== Hex Grid Elements ====== */
 .hex {
   transition: filter 0.3s ease;
   stroke-width: 1.5;
@@ -46,8 +57,7 @@
   opacity: 0.8;
 }
 
-/* Add these styles to your existing Board.css */
-
+/* ====== Units ====== */
 .unit {
   cursor: pointer;
   pointer-events: all;
@@ -61,13 +71,14 @@
   filter: drop-shadow(0 0 5px white);
 }
 
-.unit.can-move {
-  animation: pulse 1.5s infinite;
-}
-
 .unit.selected circle {
   stroke-width: 2px;
   stroke: white;
+}
+
+/* Movement-related unit states */
+.unit.can-move {
+  animation: pulse 1.5s infinite;
 }
 
 .move-indicator {
@@ -76,40 +87,7 @@
   animation: fade-pulse 1.5s infinite;
 }
 
-.phase-instructions {
-  margin-top: 10px;
-  font-size: 0.9rem;
-  color: var(--divine-light);
-  text-align: center;
-}
-
-/* Use a more stable animation that won't cause position issues */
-@keyframes pulse {
-  0% {
-    opacity: 0.8;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.8;
-  }
-}
-
-@keyframes fade-pulse {
-  0% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.5;
-  }
-}
-
-/* src/styles/Board.css - Add these styles */
-
+/* Combat-related unit states */
 .unit.can-attack {
   cursor: pointer;
 }
@@ -119,25 +97,21 @@
   stroke-width: 1.5px;
 }
 
+.unit.attackable {
+  filter: drop-shadow(0 0 3px #ff4500);
+}
+
+.unit.attack-target {
+  filter: drop-shadow(0 0 4px #ff0000);
+}
+
+/* ====== Combat Visuals ====== */
 .attack-indicator {
   cursor: pointer;
   pointer-events: all;
   animation: blink 1.5s infinite;
 }
 
-@keyframes blink {
-  0% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.3;
-  }
-}
-
-/* Fantasy-themed attack indicators */
 .attack-glow {
   filter: drop-shadow(0 0 5px #FF4500);
   animation: pulse-glow 1.5s infinite;
@@ -155,18 +129,52 @@
   filter: drop-shadow(0 0 2px crimson);
 }
 
-.attack-confirm-button, .attack-cancel-button {
+.attack-line {
+  stroke: #FF3333;
+  stroke-width: 2;
+  stroke-dasharray: 5,3;
+  marker-end: url(#arrowhead);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.attack-confirmation {
+  filter: drop-shadow(0 0 5px #FF0000);
+}
+
+/* ====== Combat UI Elements ====== */
+.attack-confirm-button, 
+.attack-cancel-button {
   cursor: pointer;
 }
 
-.attack-confirm-button:hover {
+.attack-confirm-button:hover,
+.attack-cancel-button:hover {
   stroke: #FBFBD7;
   stroke-width: 1px;
 }
 
-.attack-cancel-button:hover {
-  stroke: #FBFBD7;
-  stroke-width: 1px;
+.planned-attack {
+  pointer-events: all;
+}
+
+/* ====== Animations ====== */
+@keyframes pulse {
+  0% { opacity: 0.8; }
+  50% { opacity: 1; }
+  100% { opacity: 0.8; }
+}
+
+@keyframes fade-pulse {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+@keyframes blink {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
 }
 
 @keyframes pulse-glow {
@@ -186,6 +194,7 @@
   100% { stroke-width: 3px; }
 }
 
+/* ====== Responsive Adjustments ====== */
 @media (max-height: 700px) {
   .board-container {
     height: 60vh;

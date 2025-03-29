@@ -49,6 +49,7 @@ const initialGameState: GameState = {
 type GameAction = 
   | { type: 'NEXT_PHASE' }
   | { type: 'END_PHASE' }
+  | { type: 'END_COMBAT' } // Add this line
   | { type: 'SET_BOARD', payload: Hex[] }
   | { type: 'RESET_GAME', payload?: { startingPlayer: Player } }
   | { type: 'START_GAME', payload: { startingPlayer: Player } }
@@ -57,6 +58,7 @@ type GameAction =
   | { type: 'SELECT_UNIT', payload: string | null }
   | { type: 'MOVE_UNIT', payload: { unitId: string, q: number, r: number } }
   | { type: 'ATTACK_UNIT', payload: { attackerId: string, defenderId: string } }; // Add this line
+  
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {

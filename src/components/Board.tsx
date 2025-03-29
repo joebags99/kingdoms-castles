@@ -1,14 +1,23 @@
-// src/components/Board.tsx
+// src/components/Board.tsx - Replace the entire file with this updated version
+
 import React, { useEffect, useState, useRef } from 'react';
 import { generateBoard, hexToPixel, Hex, toggleResourceGeneration, getAdjacentHexes } from '../game-logic/board';
 import { useGame } from '../game-logic/GameContext';
 import { GamePhase } from '../game-logic/constants';
 import '../styles/Board.css';
 
+interface Attack {
+  attackerId: string;
+  defenderId: string;
+}
+
 const Board: React.FC = () => {
   const { state, dispatch } = useGame();
-  const [hexSize, setHexSize] = useState(22); // Reduced default size
+  const [hexSize, setHexSize] = useState(22);
   const [selectedHex, setSelectedHex] = useState<{q: number, r: number} | null>(null);
+  const [pendingAttack, setPendingAttack] = useState<string | null>(null);
+  const [attacks, setAttacks] = useState<Attack[]>([]);
+  const [attackableUnits, setAttackableUnits] = useState<string[]>([]);
   const boardContainerRef = useRef<HTMLDivElement>(null);
   
   // Calculate the visible boundaries of the board
@@ -20,8 +29,8 @@ const Board: React.FC = () => {
         minR: 0, 
         maxR: 6, 
         hexCount: 0,
-        width: 15,  // Default width
-        height: 7   // Default height
+        width: 15,
+        height: 7
       };
     }
     
@@ -47,14 +56,45 @@ const Board: React.FC = () => {
   
   // Generate the board when component mounts or when the board is empty
   useEffect(() => {
-    // Only generate a new board if it's empty (initial load or after reset)
     if (state.board.length === 0) {
-      const boardWidth = 15;  // Horizontal extent (columns)
-      const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
+      const boardWidth = 15;
+      const boardHeight = 8;
       const newBoard = generateBoard(boardWidth, boardHeight);
       dispatch({ type: 'SET_BOARD', payload: newBoard });
     }
   }, [dispatch, state.board.length]);
+  
+  // Reset attacks when phase changes
+  useEffect(() => {
+    if (state.currentPhase !== GamePhase.Combat) {
+      setAttacks([]);
+      setPendingAttack(null);
+      setAttackableUnits([]);
+    }
+  }, [state.currentPhase]);
+  
+  // Update attackable units when unit is selected in combat phase
+  useEffect(() => {
+    if (state.currentPhase === GamePhase.Combat && state.selectedUnit) {
+      const unit = state.units.find(u => u.id === state.selectedUnit);
+      if (unit && unit.owner === state.currentPlayer) {
+        const adjacentHexes = getAdjacentHexes(unit.q, unit.r);
+        const attackable = state.units
+          .filter(u => 
+            u.owner !== state.currentPlayer && 
+            adjacentHexes.some(hex => hex.q === u.q && hex.r === u.r) &&
+            !attacks.some(attack => attack.attackerId === state.selectedUnit && attack.defenderId === u.id)
+          )
+          .map(u => u.id);
+        
+        setAttackableUnits(attackable);
+      } else {
+        setAttackableUnits([]);
+      }
+    } else {
+      setAttackableUnits([]);
+    }
+  }, [state.currentPhase, state.selectedUnit, state.units, attacks, state.currentPlayer]);
   
   // Adjust hex size when window or container resizes
   useEffect(() => {
@@ -65,45 +105,38 @@ const Board: React.FC = () => {
       const containerWidth = boardContainerRef.current.clientWidth - 40;
       const containerHeight = boardContainerRef.current.clientHeight - 40;
       
-      // Calculate the horizontal and vertical span for pointy-topped hexes
       const horizontalSpan = (metrics.width + 1) * Math.sqrt(3) * hexSize;
       const verticalSpan = (metrics.height + 1) * 1.5 * hexSize;
       
-      // Calculate the maximum size that will fit
       const maxSizeForWidth = containerWidth / horizontalSpan;
       const maxSizeForHeight = containerHeight / verticalSpan;
       
-      // Use the smaller size to ensure everything fits
       const newSize = Math.min(maxSizeForWidth, maxSizeForHeight, 30);
-      setHexSize(Math.max(newSize, 12)); // Don't go too small
+      setHexSize(Math.max(newSize, 12));
     };
     
-    handleResize(); // Initial sizing
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [state.board, hexSize]);
 
   // Determine color based on zone and capital status
   const getHexColor = (hex: Hex) => {
-    // If this is part of a capital, use a brighter/highlighted color
     if (hex.capitalOwner === 'A') {
-      // Resource generating hexes are brighter
       return hex.generateResource ? '#CC0000' : '#9A0000';
     } else if (hex.capitalOwner === 'B') {
-      // Resource generating hexes are brighter
       return hex.generateResource ? '#FFD700' : '#FFB733';
     }
     
-    // If not part of a capital, use standard zone colors
     switch (hex.zone) {
       case 'A':
-        return '#660000'; // Royal Red for Player A
+        return '#660000';
       case 'B': 
-        return '#CC9933'; // Belaklara Gold for Player B
+        return '#CC9933';
       case 'Neutral':
-        return '#193B1C'; // Guardian Green for neutral zones
+        return '#193B1C';
       default:
-        return '#FBFBD7'; // Divine Light White as fallback
+        return '#FBFBD7';
     }
   };
 
@@ -111,7 +144,7 @@ const Board: React.FC = () => {
   const hexPoints = (size: number): string => {
     const points = [];
     for (let i = 0; i < 6; i++) {
-      const angle = 2 * Math.PI / 6 * i + Math.PI/6; // Rotated 30 degrees for pointy-top
+      const angle = 2 * Math.PI / 6 * i + Math.PI/6;
       const x = size * Math.cos(angle);
       const y = size * Math.sin(angle);
       points.push(`${x},${y}`);
@@ -119,26 +152,22 @@ const Board: React.FC = () => {
     return points.join(' ');
   };
 
-  const [attackTarget, setAttackTarget] = useState<string | null>(null);
-
   // Handle hex click based on current phase
   const handleHexClick = (hex: Hex) => {
     const { q, r } = hex;
     
-    // If in Setup phase and hex is part of a capital, toggle resource generation
+    // Setup phase - toggle resource generation for capital hexes
     if (state.currentPhase === GamePhase.Setup && hex.capitalOwner) {
       const updatedBoard = toggleResourceGeneration(state.board, q, r);
       dispatch({ type: 'SET_BOARD', payload: updatedBoard });
       return;
     }
     
-    // In Development phases, deploy units
+    // Development phases - deploy units
     if ((state.currentPhase === GamePhase.Dev1 || state.currentPhase === GamePhase.Dev2) && 
         hex.zone === state.currentPlayer) {
-      // Check if this hex is already occupied
       const isOccupied = state.units.some(unit => unit.q === q && unit.r === r);
       if (!isOccupied) {
-        // Deploy a basic unit (we'll make these parameters configurable later)
         dispatch({ 
           type: 'DEPLOY_UNIT', 
           payload: { q, r, ap: 3, hp: 5 }
@@ -147,11 +176,10 @@ const Board: React.FC = () => {
       return;
     }
     
-    // In Movement phase, with a selected unit, try to move the unit
+    // Movement phase - move selected unit
     if (state.currentPhase === GamePhase.Movement && state.selectedUnit) {
       const selectedUnitObj = state.units.find(unit => unit.id === state.selectedUnit);
       if (selectedUnitObj && selectedUnitObj.owner === state.currentPlayer) {
-        // Try to move the unit to the clicked hex
         dispatch({
           type: 'MOVE_UNIT',
           payload: { unitId: state.selectedUnit, q, r }
@@ -160,291 +188,85 @@ const Board: React.FC = () => {
       return;
     }
     
-    // In Combat phase, with a selected unit, try to attack an enemy unit
-  if (state.currentPhase === GamePhase.Combat && state.selectedUnit) {
-    const attacker = state.units.find(unit => unit.id === state.selectedUnit);
-    if (!attacker || attacker.owner !== state.currentPlayer) return;
-    
-    // Find if there's a unit on the clicked hex
-    const targetUnit = state.units.find(unit => unit.q === q && unit.r === r);
-    if (targetUnit && targetUnit.owner !== state.currentPlayer) {
-      // Set attack target before launching attack
-      setAttackTarget(targetUnit.id);
-      
-      // Show confirmation UI instead of immediately attacking
-      return;
-    }
-    return;
-  }
-    
-    // Select unit in Movement or Combat phase
-    if (state.currentPhase === GamePhase.Movement || state.currentPhase === GamePhase.Combat) {
-      setSelectedHex({ q, r });
-      
-      // Check if there's a unit in this hex
+    // Combat phase - select unit for attack
+    if (state.currentPhase === GamePhase.Combat) {
       const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+      
+      // If clicking on one of our units, select it
       if (unitInHex && unitInHex.owner === state.currentPlayer) {
-        // Select this unit
+        setPendingAttack(null);
         dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
+        return;
       }
-      return;
+      
+      // If a unit is selected and clicking on an enemy unit
+      if (state.selectedUnit && unitInHex && unitInHex.owner !== state.currentPlayer) {
+        // Check if this is a valid attack target
+        if (attackableUnits.includes(unitInHex.id)) {
+          setPendingAttack(unitInHex.id);
+        }
+        return;
+      }
+      
+      // Clear pending attack if clicking empty hex
+      setPendingAttack(null);
+    }
+    
+    // Select hex/unit in other phases
+    setSelectedHex({ q, r });
+    const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+    if (unitInHex && (unitInHex.owner === state.currentPlayer || state.currentPhase === GamePhase.Combat)) {
+      dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
     }
   };
 
-  const executeAttack = () => {
-    if (state.selectedUnit && attackTarget) {
+  // Confirm an attack
+  const confirmAttack = () => {
+    if (state.selectedUnit && pendingAttack) {
+      // Add to attacks array rather than executing immediately
+      setAttacks([...attacks, { 
+        attackerId: state.selectedUnit, 
+        defenderId: pendingAttack 
+      }]);
+      
+      // Clear pending attack and selected unit
+      setPendingAttack(null);
+      dispatch({ type: 'SELECT_UNIT', payload: null });
+    }
+  };
+
+  // Cancel an attack
+  const cancelAttack = () => {
+    setPendingAttack(null);
+  };
+  
+  // Remove an attack
+  const removeAttack = (attackerId: string, defenderId: string) => {
+    setAttacks(attacks.filter(attack => 
+      !(attack.attackerId === attackerId && attack.defenderId === defenderId)
+    ));
+  };
+  
+  // Execute all planned attacks
+  const executeAttacks = () => {
+    // Actually execute the attacks when ending the combat phase
+    attacks.forEach(attack => {
       dispatch({
         type: 'ATTACK_UNIT',
-        payload: { attackerId: state.selectedUnit, defenderId: attackTarget }
+        payload: { attackerId: attack.attackerId, defenderId: attack.defenderId }
       });
-      // Reset target after attack
-      setAttackTarget(null);
-    }
+    });
+    
+    // Clear the attacks
+    setAttacks([]);
   };
-
-      // Cancel attack function
-const cancelAttack = () => {
-  setAttackTarget(null);
-};
-
-// Function to render attack indicators with fantasy-themed highlighting
-const renderAttackIndicators = () => {
-  if (!state.selectedUnit || state.currentPhase !== GamePhase.Combat) return null;
   
-  const unit = state.units.find(u => u.id === state.selectedUnit);
-  if (!unit || unit.owner !== state.currentPlayer) return null;
-  
-  const adjacentHexes = getAdjacentHexes(unit.q, unit.r);
-  const attackableUnits = state.units.filter(u => 
-    u.owner !== state.currentPlayer && // Enemy units
-    adjacentHexes.some(hex => hex.q === u.q && hex.r === u.r) // Adjacent to selected unit
-  );
-  
-  return (
-    <>
-      {attackableUnits.map((enemyUnit) => {
-        const { x: enemyX, y: enemyY } = hexToPixel(enemyUnit.q, enemyUnit.r, hexSize);
-        const isTargeted = attackTarget === enemyUnit.id;
-        
-        return (
-          <g 
-            key={`attack-${enemyUnit.id}`}
-            transform={`translate(${enemyX}, ${enemyY})`}
-            className={`attack-indicator ${isTargeted ? 'targeted' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isTargeted) {
-                // If already targeted, execute the attack
-                executeAttack();
-              } else {
-                // Otherwise, select this as the target
-                setAttackTarget(enemyUnit.id);
-              }
-            }}
-          >
-            {/* Fantasy-themed aura/glow for attackable unit */}
-            <circle 
-              cx="0" 
-              cy="0" 
-              r={hexSize * 0.6} 
-              className="attack-glow"
-              fill="url(#attackGradient)"
-              opacity={isTargeted ? 0.8 : 0.5}
-            />
-            
-            {/* Decorative "sword" icons at cardinal points */}
-            {!isTargeted && (
-              <>
-                <path 
-                  d="M0,-20 L-3,-10 L0,-5 L3,-10 Z" 
-                  fill="#F8D100"
-                  stroke="#FF0000"
-                  strokeWidth="1"
-                  className="attack-icon"
-                  transform="scale(0.8)"
-                />
-                <path 
-                  d="M0,20 L-3,10 L0,5 L3,10 Z" 
-                  fill="#F8D100"
-                  stroke="#FF0000"
-                  strokeWidth="1"
-                  className="attack-icon"
-                  transform="scale(0.8) rotate(180)"
-                />
-                <path 
-                  d="M0,-20 L-3,-10 L0,-5 L3,-10 Z" 
-                  fill="#F8D100"
-                  stroke="#FF0000"
-                  strokeWidth="1"
-                  className="attack-icon"
-                  transform="scale(0.8) rotate(90) translate(0, -20)"
-                />
-                <path 
-                  d="M0,-20 L-3,-10 L0,-5 L3,-10 Z" 
-                  fill="#F8D100"
-                  stroke="#FF0000" 
-                  strokeWidth="1"
-                  className="attack-icon"
-                  transform="scale(0.8) rotate(270) translate(0, -20)"
-                />
-              </>
-            )}
-          </g>
-        );
-      })}
-      
-      {/* Draw arrow from attacker to target if target is selected */}
-      {attackTarget && (() => {
-        const targetUnit = state.units.find(u => u.id === attackTarget);
-        const attackerUnit = state.units.find(u => u.id === state.selectedUnit);
-        
-        if (!targetUnit || !attackerUnit) return null;
-        
-        const { x: targetX, y: targetY } = hexToPixel(targetUnit.q, targetUnit.r, hexSize);
-        const { x: attackerX, y: attackerY } = hexToPixel(attackerUnit.q, attackerUnit.r, hexSize);
-        
-        // Calculate direction for arrow
-        const dx = targetX - attackerX;
-        const dy = targetY - attackerY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Normalize direction vector
-        const nx = dx / distance;
-        const ny = dy / distance;
-        
-        // Calculate start and end points, slightly offset from centers
-        const startX = attackerX + nx * hexSize * 0.5;
-        const startY = attackerY + ny * hexSize * 0.5;
-        const endX = targetX - nx * hexSize * 0.5;
-        const endY = targetY - ny * hexSize * 0.5;
-        
-        // Calculate control point for curved arrow (perpendicular to direction)
-        const controlX = (startX + endX) / 2 + ny * hexSize * 0.5;
-        const controlY = (startY + endY) / 2 - nx * hexSize * 0.5;
-        
-        const arrowId = `attack-arrow-${attackerUnit.id}`;
-        
-        return (
-          <g key="attack-path" className="attack-confirmation">
-            {/* Arrow definition */}
-            <defs>
-              <marker
-                id={arrowId}
-                viewBox="0 0 10 10"
-                refX="1"
-                refY="5"
-                markerWidth="8"
-                markerHeight="8"
-                orient="auto"
-              >
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="#FF0000" />
-              </marker>
-              
-              <radialGradient
-                id="attackGradient"
-                cx="50%"
-                cy="50%"
-                r="50%"
-                fx="50%"
-                fy="50%"
-              >
-                <stop offset="0%" stopColor="#FF9900" stopOpacity="0.1" />
-                <stop offset="70%" stopColor="#FF4500" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#8B0000" stopOpacity="0.5" />
-              </radialGradient>
-            </defs>
-            
-            {/* Attack curved arrow */}
-            <path
-              d={`M ${startX} ${startY} Q ${controlX} ${controlY} ${endX} ${endY}`}
-              stroke="#FF0000"
-              strokeWidth="3"
-              fill="none"
-              markerEnd={`url(#${arrowId})`}
-              className="attack-arrow"
-            />
-            
-            {/* Confirmation buttons */}
-            <g transform={`translate(${(startX + endX) / 2}, ${(startY + endY) / 2})`}>
-              <rect
-                x="-40"
-                y="-12"
-                width="80"
-                height="24"
-                rx="5"
-                ry="5"
-                fill="rgba(0, 0, 0, 0.7)"
-                stroke="#CC9933"
-                strokeWidth="1"
-              />
-              <text
-                x="0"
-                y="0"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill="#FBFBD7"
-                fontSize="12"
-                fontWeight="bold"
-                pointerEvents="none"
-              >
-                Confirm Attack
-              </text>
-              <rect
-                x="-40"
-                y="-12"
-                width="80"
-                height="24"
-                rx="5"
-                ry="5"
-                fill="transparent"
-                onClick={executeAttack}
-                className="attack-confirm-button"
-              />
-              
-              {/* Cancel button */}
-              <g transform="translate(0, 25)">
-                <rect
-                  x="-30"
-                  y="-10"
-                  width="60"
-                  height="20"
-                  rx="5"
-                  ry="5"
-                  fill="rgba(0, 0, 0, 0.7)"
-                  stroke="#660000"
-                  strokeWidth="1"
-                />
-                <text
-                  x="0"
-                  y="0"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="#FBFBD7"
-                  fontSize="10"
-                  fontWeight="bold"
-                  pointerEvents="none"
-                >
-                  Cancel
-                </text>
-                <rect
-                  x="-30"
-                  y="-10"
-                  width="60"
-                  height="20"
-                  rx="5"
-                  ry="5"
-                  fill="transparent"
-                  onClick={cancelAttack}
-                  className="attack-cancel-button"
-                />
-              </g>
-            </g>
-          </g>
-        );
-      })()}
-    </>
-  );
-};
+  // When ending the combat phase, execute all attacks
+  useEffect(() => {
+    if (state.currentPhase !== GamePhase.Combat && attacks.length > 0) {
+      executeAttacks();
+    }
+  }, [state.currentPhase]);
 
   // Function to render a unit on the board
   const renderUnit = (unit: any) => {
@@ -454,17 +276,38 @@ const renderAttackIndicators = () => {
                   unit.owner === state.currentPlayer && 
                   !unit.hasMoved;
     const canAttack = state.currentPhase === GamePhase.Combat &&
-                    unit.owner === state.currentPlayer;
+                    unit.owner === state.currentPlayer &&
+                    !attacks.some(attack => attack.attackerId === unit.id);
+    const isAttackable = attackableUnits.includes(unit.id);
+    const isPendingTarget = unit.id === pendingAttack;
+    const isAttackTarget = attacks.some(attack => attack.defenderId === unit.id);
                     
     return (
       <g 
         key={`unit-${unit.id}`} 
         transform={`translate(${x}, ${y})`}
-        className={`unit ${isSelected ? 'selected' : ''} ${canMove ? 'can-move' : ''} ${canAttack ? 'can-attack' : ''}`}
+        className={`
+          unit 
+          ${isSelected ? 'selected' : ''} 
+          ${canMove ? 'can-move' : ''} 
+          ${canAttack ? 'can-attack' : ''} 
+          ${isAttackable ? 'attackable' : ''}
+          ${isPendingTarget ? 'pending-target' : ''}
+          ${isAttackTarget ? 'attack-target' : ''}
+        `}
         onClick={(e) => {
           e.stopPropagation();
-          if ((state.currentPhase === GamePhase.Movement || state.currentPhase === GamePhase.Combat) && 
-              unit.owner === state.currentPlayer) {
+          if (state.currentPhase === GamePhase.Combat) {
+            if (unit.owner === state.currentPlayer) {
+              // Select our unit
+              dispatch({ type: 'SELECT_UNIT', payload: unit.id });
+              setPendingAttack(null);
+            } else if (state.selectedUnit && attackableUnits.includes(unit.id)) {
+              // Select enemy as attack target
+              setPendingAttack(unit.id);
+            }
+          } else if (state.currentPhase === GamePhase.Movement && 
+                   unit.owner === state.currentPlayer) {
             dispatch({ type: 'SELECT_UNIT', payload: unit.id });
           }
         }}
@@ -474,8 +317,8 @@ const renderAttackIndicators = () => {
           cy="0" 
           r={hexSize * 0.4} 
           fill={unit.owner === 'A' ? '#990000' : '#FFCC00'} 
-          stroke={isSelected ? '#FFFFFF' : '#000000'}
-          strokeWidth={isSelected ? 2 : 1}
+          stroke={isSelected ? '#FFFFFF' : (isPendingTarget ? '#FF0000' : '#000000')}
+          strokeWidth={isSelected || isPendingTarget ? 2 : 1}
         />
         <text 
           x="0" 
@@ -501,7 +344,6 @@ const renderAttackIndicators = () => {
     
     const adjacentHexes = getAdjacentHexes(unit.q, unit.r);
     const validMoveHexes = adjacentHexes.filter(adjHex => {
-      // Check if hex exists on board and is not occupied
       const hexExists = state.board.some(h => h.q === adjHex.q && h.r === adjHex.r);
       const isOccupied = state.units.some(u => u.q === adjHex.q && u.r === adjHex.r);
       return hexExists && !isOccupied;
@@ -535,19 +377,194 @@ const renderAttackIndicators = () => {
     });
   };
   
+  // Render attack confirmation UI
+  const renderAttackConfirmation = () => {
+    if (!pendingAttack || !state.selectedUnit) return null;
+    
+    const attacker = state.units.find(u => u.id === state.selectedUnit);
+    const defender = state.units.find(u => u.id === pendingAttack);
+    
+    if (!attacker || !defender) return null;
+    
+    const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
+    const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
+    
+    // Calculate midpoint for confirmation buttons
+    const mx = (ax + dx) / 2;
+    const my = (ay + dy) / 2;
+    
+    return (
+      <g className="attack-confirmation">
+        {/* Arrow from attacker to defender */}
+        <defs>
+          <marker
+            id="arrowhead"
+            markerWidth="10"
+            markerHeight="7"
+            refX="0"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#FF0000" />
+          </marker>
+        </defs>
+        
+        <line
+          x1={ax}
+          y1={ay}
+          x2={dx}
+          y2={dy}
+          className="attack-arrow"
+        />
+        
+        {/* Confirmation UI */}
+        <g transform={`translate(${mx}, ${my})`}>
+          <rect 
+            x="-60" 
+            y="-15" 
+            width="120" 
+            height="30" 
+            rx="5" 
+            fill="rgba(0,0,0,0.7)" 
+            stroke="#FBFBD7"
+          />
+          
+          {/* Confirm button */}
+          <g transform="translate(-30, 0)" onClick={confirmAttack} style={{ cursor: 'pointer' }}>
+            <rect x="-25" y="-10" width="50" height="20" rx="3" fill="#336633" />
+            <text
+              x="0"
+              y="0"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#FFFFFF"
+              fontSize="12"
+            >
+              Attack
+            </text>
+          </g>
+          
+          {/* Cancel button */}
+          <g transform="translate(30, 0)" onClick={cancelAttack} style={{ cursor: 'pointer' }}>
+            <rect x="-25" y="-10" width="50" height="20" rx="3" fill="#663333" />
+            <text
+              x="0"
+              y="0"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#FFFFFF"
+              fontSize="12"
+            >
+              Cancel
+            </text>
+          </g>
+        </g>
+      </g>
+    );
+  };
+  
+  // Render planned attacks
+  const renderPlannedAttacks = () => {
+    if (attacks.length === 0) return null;
+    
+    return attacks.map((attack, index) => {
+      const attacker = state.units.find(u => u.id === attack.attackerId);
+      const defender = state.units.find(u => u.id === attack.defenderId);
+      
+      if (!attacker || !defender) return null;
+      
+      const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
+      const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
+      
+      return (
+        <g key={`attack-${index}`} className="planned-attack">
+          <line
+            x1={ax}
+            y1={ay}
+            x2={dx}
+            y2={dy}
+            className="attack-line"
+          />
+          
+          {/* Cancel button for the attack */}
+          <g 
+            transform={`translate(${(ax + dx) / 2}, ${(ay + dy) / 2})`}
+            onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
+            style={{ cursor: 'pointer' }}
+          >
+            <circle r="8" fill="rgba(0,0,0,0.7)" />
+            <text
+              x="0"
+              y="0"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#FFFFFF"
+              fontSize="12"
+            >
+              ×
+            </text>
+          </g>
+        </g>
+      );
+    });
+  };
+
+  const pendingAttackExecution = useRef(false);
+  
+  // Update the useEffect that watches for phase changes
+  useEffect(() => {
+    // If we're entering a new phase and there are pending attacks to execute
+    if (pendingAttackExecution.current) {
+      // Execute all planned attacks BEFORE cleaning up
+      attacks.forEach(attack => {
+        const attacker = state.units.find(unit => unit.id === attack.attackerId);
+        const defender = state.units.find(unit => unit.id === attack.defenderId);
+        
+        if (attacker && defender) {
+          console.log(`Executing attack: ${attacker.owner}'s unit attacks ${defender.owner}'s unit`);
+          
+          // Calculate damage (without dispatching yet)
+          const attackerNewHp = attacker.hp - defender.ap;
+          const defenderNewHp = defender.hp - attacker.ap;
+          
+          console.log(`Combat result: Attacker HP ${attacker.hp} → ${attackerNewHp}, Defender HP ${defender.hp} → ${defenderNewHp}`);
+          
+          // Now dispatch the attack
+          dispatch({
+            type: 'ATTACK_UNIT',
+            payload: { attackerId: attack.attackerId, defenderId: attack.defenderId }
+          });
+        }
+      });
+      
+      // Reset
+      pendingAttackExecution.current = false;
+      setAttacks([]);
+    }
+    
+    // If leaving combat phase, mark attacks for execution on next render
+    if (state.currentPhase !== GamePhase.Combat && attacks.length > 0) {
+      pendingAttackExecution.current = true;
+    }
+  }, [state.currentPhase, dispatch]);
+  
   const metrics = getBoardMetrics();
   
-  // Calculate padding with extra space for the rotated hexes
   const paddingX = hexSize * 3;
   const paddingY = hexSize * 3;
   
-  // Calculate SVG viewBox dimensions for pointy-topped hexes
   const minX = Math.sqrt(3) * hexSize * metrics.minQ - paddingX;
   const minY = 1.5 * hexSize * metrics.minR - paddingY;
   const width = Math.sqrt(3) * hexSize * (metrics.width + 2) + 2 * paddingX;
   const height = 1.5 * hexSize * (metrics.height + 2) + 2 * paddingY;
   
-  // Render method with added units
+  // Check if there are units that can attack in the current phase
+  const hasAttackableUnits = state.currentPhase === GamePhase.Combat && 
+                            state.units.some(unit => 
+                              unit.owner === state.currentPlayer &&
+                              !attacks.some(attack => attack.attackerId === unit.id)
+                            );
+  
   return (
     <div className="board-container" ref={boardContainerRef}>
       <div className="board-wrapper">
@@ -556,6 +573,20 @@ const renderAttackIndicators = () => {
           viewBox={`${minX} ${minY} ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
         >
+          {/* Define arrowhead marker */}
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="10"
+              markerHeight="7"
+              refX="9"
+              refY="3.5"
+              orient="auto"
+            >
+              <polygon points="0 0, 10 3.5, 0 7" fill="#FF0000" />
+            </marker>
+          </defs>
+          
           {/* Render the hexes first */}
           {state.board.map((hex) => {
             const { x, y } = hexToPixel(hex.q, hex.r, hexSize);
@@ -593,11 +624,14 @@ const renderAttackIndicators = () => {
           {/* Render movement indicators */}
           {state.currentPhase === GamePhase.Movement && renderMoveIndicators()}
           
-          {/* Render attack indicators */}
-          {state.currentPhase === GamePhase.Combat && renderAttackIndicators()}
+          {/* Render planned attacks */}
+          {state.currentPhase === GamePhase.Combat && renderPlannedAttacks()}
           
           {/* Render all units on top of the hexes */}
           {state.units.map(unit => renderUnit(unit))}
+          
+          {/* Render attack confirmation UI */}
+          {state.currentPhase === GamePhase.Combat && renderAttackConfirmation()}
         </svg>
       </div>
       
@@ -608,7 +642,18 @@ const renderAttackIndicators = () => {
         ) : state.currentPhase === GamePhase.Movement ? (
           <p>Select your unit, then click on an adjacent hex to move</p>
         ) : state.currentPhase === GamePhase.Combat ? (
-          <p>Select your unit, then click on an adjacent enemy unit to attack</p>
+          <>
+            <p>
+              {attacks.length > 0 
+                ? `${attacks.length} attack(s) planned. Select more units to plan additional attacks.` 
+                : hasAttackableUnits
+                  ? "Select your unit, then click on an adjacent enemy unit to attack"
+                  : "No more units available to attack. End phase to resolve combat."}
+            </p>
+            {attacks.length > 0 && (
+              <p><small>Attacks will be resolved when you end the combat phase</small></p>
+            )}
+          </>
         ) : null}
       </div>
     </div>
