@@ -1,11 +1,12 @@
 // src/game-logic/GameContext.tsx
 
 import React, { createContext, useReducer, useContext, ReactNode } from 'react';
-import { Hex } from './board'; // Import Hex from board.ts
-import { GamePhase } from './constants'; // Import the game phase enum
+import { Hex, getAdjacentHexes } from './board'; // Import Hex and getAdjacentHexes
+import { GamePhase, Player } from './constants';
+import { Unit } from './types';
 
 export interface GameState {
-  currentPlayer: 'A' | 'B';
+  currentPlayer: Player;
   currentPhase: GamePhase;
   turnNumber: {
     A: number,
@@ -18,36 +19,44 @@ export interface GameState {
   };
   gameStarted: boolean;
   setupComplete: boolean;
-  // Add a flag to track if resources were collected this turn
   resourcesCollectedThisTurn: boolean;
+  units: Unit[]; // Add this line to track units
+  selectedUnit: string | null; // Add this to track the currently selected unit
 }
 
-// Initial state for the game
+// Update initialGameState to include empty units array and selectedUnit
 const initialGameState: GameState = {
-  currentPlayer: 'A', // Player A starts
-  currentPhase: GamePhase.Setup, // Game begins with Setup phase
+  currentPlayer: 'A',
+  currentPhase: GamePhase.Setup,
   turnNumber: {
-    A: 0,  // Start at turn 0
-    B: 0   // Start at turn 0
+    A: 0,
+    B: 0
   },
-  board: [], // Empty board to start
+  board: [],
   resources: {
     A: { gold: 0 },
     B: { gold: 0 }
   },
   gameStarted: false,
   setupComplete: false,
-  resourcesCollectedThisTurn: false
+  resourcesCollectedThisTurn: false,
+  units: [], // Initialize empty units array
+  selectedUnit: null // Initialize with no selected unit
 };
 
-// Define the types of actions we can dispatch
+// In src/game-logic/GameContext.tsx, update the GameAction type definition:
+
 type GameAction = 
   | { type: 'NEXT_PHASE' }
   | { type: 'END_PHASE' }
   | { type: 'SET_BOARD', payload: Hex[] }
-  | { type: 'RESET_GAME', payload?: { startingPlayer: 'A' | 'B' } }
-  | { type: 'START_GAME', payload: { startingPlayer: 'A' | 'B' } }
-  | { type: 'COMPLETE_SETUP' };
+  | { type: 'RESET_GAME', payload?: { startingPlayer: Player } }
+  | { type: 'START_GAME', payload: { startingPlayer: Player } }
+  | { type: 'COMPLETE_SETUP' }
+  | { type: 'DEPLOY_UNIT', payload: { q: number, r: number, ap: number, hp: number } }
+  | { type: 'SELECT_UNIT', payload: string | null }
+  | { type: 'MOVE_UNIT', payload: { unitId: string, q: number, r: number } }
+  | { type: 'ATTACK_UNIT', payload: { attackerId: string, defenderId: string } }; // Add this line
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -84,6 +93,19 @@ function gameReducer(state: GameState, action: GameAction): GameState {
           turnNumber: newTurn,
           // Reset the resource collection flag for the new turn
           resourcesCollectedThisTurn: false
+        };
+        
+        // Also reset hasMoved flag for all units of the new player
+        const updatedUnits = state.units.map(unit => {
+          if (unit.owner === newPlayer) {
+            return { ...unit, hasMoved: false };
+          }
+          return unit;
+        });
+        
+        newState = {
+          ...newState,
+          units: updatedUnits
         };
       }
       
@@ -129,7 +151,225 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       return newState;
     }
+
+    // For deploying a new unit
+    case 'DEPLOY_UNIT': {
+      const { q, r, ap, hp } = action.payload;
       
+      // Check if the hex is valid for deployment
+      const targetHex = state.board.find(hex => hex.q === q && hex.r === r);
+      
+      // Validate that:
+      // 1. The hex belongs to the current player's territory
+      // 2. The hex is not already occupied by another unit
+      const hexBelongsToPlayer = targetHex?.zone === state.currentPlayer;
+      const isCapitalArea = targetHex?.capitalOwner === state.currentPlayer;
+      const isHexOccupied = state.units.some(unit => unit.q === q && unit.r === r);
+      
+      if (!targetHex || !hexBelongsToPlayer || isHexOccupied) {
+        console.log(`Cannot deploy unit: invalid hex or hex already occupied`);
+        return state;
+      }
+      
+      // Check if player has enough resources (5 gold per unit)
+      const unitCost = 5;
+      const playerResources = state.resources[state.currentPlayer].gold;
+      
+      if (playerResources < unitCost) {
+        console.log(`Cannot deploy unit: insufficient gold (${playerResources}/${unitCost})`);
+        return state;
+      }
+      
+      // Create a new unit
+      const newUnit: Unit = {
+        id: `unit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, // Generate unique ID
+        owner: state.currentPlayer,
+        q,
+        r,
+        ap,
+        hp,
+        hasMoved: false
+      };
+      
+      // Spend resources
+      const updatedResources = {
+        ...state.resources,
+        [state.currentPlayer]: {
+          ...state.resources[state.currentPlayer],
+          gold: playerResources - unitCost
+        }
+      };
+      
+      console.log(`Player ${state.currentPlayer} deployed a unit at (${q}, ${r})`);
+      
+      // Add the new unit to the state
+      return {
+        ...state,
+        units: [...state.units, newUnit],
+        resources: updatedResources
+      };
+    }
+
+    // For selecting a unit
+    case 'SELECT_UNIT': {
+      return {
+        ...state,
+        selectedUnit: action.payload
+      };
+    }
+
+    // For moving a unit
+    case 'MOVE_UNIT': {
+      const { unitId, q, r } = action.payload;
+      
+      // Find the unit to move
+      const unitIndex = state.units.findIndex(unit => unit.id === unitId);
+      if (unitIndex === -1) {
+        console.log(`Cannot move unit: unit not found`);
+        return state;
+      }
+      
+      const unit = state.units[unitIndex];
+      
+      // Verify it's the current player's unit and we're in movement phase
+      if (unit.owner !== state.currentPlayer) {
+        console.log(`Cannot move unit: not your unit`);
+        return state;
+      }
+      
+      if (state.currentPhase !== GamePhase.Movement) {
+        console.log(`Cannot move unit: not in movement phase`);
+        return state;
+      }
+      
+      if (unit.hasMoved) {
+        console.log(`Cannot move unit: unit has already moved this turn`);
+        return state;
+      }
+      
+      // Check if the target hex is adjacent
+      const adjacentHexes = getAdjacentHexes(unit.q, unit.r);
+      const isAdjacent = adjacentHexes.some(hex => hex.q === q && hex.r === r);
+      
+      if (!isAdjacent) {
+        console.log(`Cannot move unit: target hex is not adjacent`);
+        return state;
+      }
+      
+      // Check if the target hex is already occupied
+      const isHexOccupied = state.units.some(u => u.q === q && u.r === r);
+      if (isHexOccupied) {
+        console.log(`Cannot move unit: target hex is already occupied`);
+        return state;
+      }
+      
+      // Check if the target hex exists on the board
+      const targetHex = state.board.find(hex => hex.q === q && hex.r === r);
+      if (!targetHex) {
+        console.log(`Cannot move unit: target hex does not exist`);
+        return state;
+      }
+      
+      // Log the movement for debugging
+      console.log(`Moving unit from (${unit.q}, ${unit.r}) to (${q}, ${r})`);
+      
+      // Create a copy of the units array, don't modify directly
+      const updatedUnits = [...state.units];
+      
+      // Update the unit with the new position
+      updatedUnits[unitIndex] = {
+        ...unit,
+        q: q,  // Make sure these are explicitly set
+        r: r,  // Make sure these are explicitly set
+        hasMoved: true
+      };
+      
+      // Log the updated unit for debugging
+      console.log("Updated unit:", updatedUnits[unitIndex]);
+      
+      return {
+        ...state,
+        units: updatedUnits,
+        selectedUnit: unit.id // Keep the unit selected after moving
+      };
+    }
+      
+      // For combat between units
+case 'ATTACK_UNIT': {
+  const { attackerId, defenderId } = action.payload;
+  
+  // Find the attacker and defender
+  const attacker = state.units.find(unit => unit.id === attackerId);
+  const defender = state.units.find(unit => unit.id === defenderId);
+  
+  // Validate both units exist
+  if (!attacker || !defender) {
+    console.log(`Cannot attack: one or both units not found`);
+    return state;
+  }
+  
+  // Verify we're in combat phase
+  if (state.currentPhase !== GamePhase.Combat) {
+    console.log(`Cannot attack: not in combat phase`);
+    return state;
+  }
+  
+  // Verify attacker belongs to current player
+  if (attacker.owner !== state.currentPlayer) {
+    console.log(`Cannot attack: attacker is not controlled by current player`);
+    return state;
+  }
+  
+  // Verify defender belongs to opponent
+  if (defender.owner === state.currentPlayer) {
+    console.log(`Cannot attack: cannot attack your own units`);
+    return state;
+  }
+  
+  // Check if units are adjacent
+  const adjacentHexes = getAdjacentHexes(attacker.q, attacker.r);
+  const isAdjacent = adjacentHexes.some(hex => hex.q === defender.q && hex.r === defender.r);
+  
+  if (!isAdjacent) {
+    console.log(`Cannot attack: units are not adjacent`);
+    return state;
+  }
+  
+  // Calculate simultaneous damage
+  const attackerNewHp = attacker.hp - defender.ap;
+  const defenderNewHp = defender.hp - attacker.ap;
+  
+  console.log(`Combat: ${attacker.owner}'s unit (AP: ${attacker.ap}, HP: ${attacker.hp}) ↔ ${defender.owner}'s unit (AP: ${defender.ap}, HP: ${defender.hp})`);
+  console.log(`Result: Attacker HP ${attacker.hp} → ${attackerNewHp}, Defender HP ${defender.hp} → ${defenderNewHp}`);
+  
+  // Create a new array without the dead units
+  const updatedUnits = state.units
+    .map(unit => {
+      if (unit.id === attackerId) {
+        return { ...unit, hp: attackerNewHp };
+      }
+      if (unit.id === defenderId) {
+        return { ...unit, hp: defenderNewHp };
+      }
+      return unit;
+    })
+    .filter(unit => unit.hp > 0); // Remove dead units
+  
+  // Log unit deaths if they occurred
+  if (attackerNewHp <= 0) {
+    console.log(`${attacker.owner}'s unit was destroyed in combat`);
+  }
+  if (defenderNewHp <= 0) {
+    console.log(`${defender.owner}'s unit was destroyed in combat`);
+  }
+  
+  return {
+    ...state,
+    units: updatedUnits,
+    selectedUnit: null // Clear selection after combat
+  };
+}
+
     case 'END_PHASE':
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
