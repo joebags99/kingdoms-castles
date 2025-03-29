@@ -5,9 +5,10 @@ export interface Hex {
   r: number;       // Axial coordinate r
   zone: "A" | "Neutral" | "B";  // Territory ownership
   capitalOwner?: "A" | "B";     // Indicates if this hex is part of a capital
+  generateResource?: boolean;    // Whether this hex generates resources
   terrain?: string; // Optional terrain type
 }
-  
+
   /**
  * Generates a hexagonal board with the specified dimensions
  * @param width Number of columns in the grid
@@ -101,6 +102,7 @@ export function findHexByCoordinates(board: Hex[], q: number, r: number): Hex | 
  * @param capitalR R coordinate for capital placement
  * @returns Updated board with capital placement
  */
+// src/game-logic/board.ts - Update placeCapital function
 export function placeCapital(board: Hex[], owner: "A" | "B", capitalQ: number, capitalR: number): Hex[] {
   // Create a new board to avoid mutating the original
   const newBoard = [...board];
@@ -120,6 +122,7 @@ export function placeCapital(board: Hex[], owner: "A" | "B", capitalQ: number, c
   
   // Mark the center hex as part of the capital
   centerHex.capitalOwner = owner;
+  centerHex.generateResource = false; // Center hex doesn't generate resources
   
   // Get adjacent hexes and mark them as part of the capital
   const adjacentPositions = getAdjacentHexes(capitalQ, capitalR);
@@ -128,7 +131,21 @@ export function placeCapital(board: Hex[], owner: "A" | "B", capitalQ: number, c
     const adjacentHex = findHexByCoordinates(newBoard, pos.q, pos.r);
     if (adjacentHex) {
       adjacentHex.capitalOwner = owner;
+      adjacentHex.generateResource = true; // Adjacent hexes generate resources by default
     }
+  }
+  
+  return newBoard;
+}
+
+// src/game-logic/board.ts - Add a new function
+export function toggleResourceGeneration(board: Hex[], q: number, r: number): Hex[] {
+  const newBoard = [...board];
+  const hex = findHexByCoordinates(newBoard, q, r);
+  
+  if (hex && hex.capitalOwner) {
+    // Only toggle for hexes that are part of a capital
+    hex.generateResource = !hex.generateResource;
   }
   
   return newBoard;

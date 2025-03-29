@@ -74,31 +74,38 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
 
-      case 'COLLECT_RESOURCES': {
-        const player = state.currentPlayer;
-        
-        // Calculate how many gold resources the current player receives
-        // It equals the number of hexes with capitalOwner = current player
-        const capitalHexes = state.board.filter(hex => hex.capitalOwner === player).length;
-        
-        // Resource gain depends on turn number, capped at 6
-        const resourceGain = Math.min(state.turnNumber, 6);
-        
-        // Calculate new gold amount, capped at 20
-        const currentGold = state.resources[player].gold;
-        const newGold = Math.min(currentGold + resourceGain, 20);
-        
-        return {
-          ...state,
-          resources: {
-            ...state.resources,
-            [player]: { 
-              ...state.resources[player],
-              gold: newGold
-            }
+    case 'COLLECT_RESOURCES': {
+      const player = state.currentPlayer;
+      
+      // Count how many hexes are generating resources for this player
+      const resourceGeneratingHexes = state.board.filter(
+        hex => hex.capitalOwner === player && hex.generateResource === true
+      ).length;
+      
+      // Resource gain per hex depends on turn number, capped at 6
+      const resourcePerHex = Math.min(state.turnNumber, 6);
+      
+      // Total resource gain (natural income)
+      const resourceGain = resourcePerHex;
+      
+      // Calculate new gold amount, capped at 20
+      const currentGold = state.resources[player].gold;
+      const newGold = Math.min(currentGold + resourceGain, 20);
+      
+      console.log(`Player ${player} gains ${resourceGain} gold. Now has ${newGold} gold.`);
+      console.log(`Resource generating hexes: ${resourceGeneratingHexes}`);
+      
+      return {
+        ...state,
+        resources: {
+          ...state.resources,
+          [player]: { 
+            ...state.resources[player],
+            gold: newGold
           }
-        };
-      }
+        }
+      };
+    }
       
     case 'SET_BOARD':
       return {

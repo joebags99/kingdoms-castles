@@ -1,9 +1,17 @@
+// src/components/ResourcePanel.tsx
 import React from 'react';
 import { useGame } from '../game-logic/GameContext';
 import '../styles/ResourcePanel.css';
 
 const ResourcePanel: React.FC = () => {
   const { state } = useGame();
+  
+  // Count resource generating hexes
+  const countResourceGenerators = (player: 'A' | 'B') => {
+    return state.board.filter(
+      hex => hex.capitalOwner === player && hex.generateResource === true
+    ).length;
+  };
   
   // Helper function to render resource amounts with player-specific styling
   const renderResourceAmount = (player: 'A' | 'B', resource: string, amount: number) => {
@@ -15,6 +23,9 @@ const ResourcePanel: React.FC = () => {
       </div>
     );
   };
+  
+  const resourceGeneratorsA = countResourceGenerators('A');
+  const resourceGeneratorsB = countResourceGenerators('B');
   
   return (
     <div className="resource-panel">
@@ -46,6 +57,7 @@ const ResourcePanel: React.FC = () => {
       
       <div className="resource-info">
         <p>Gold income: {Math.min(state.turnNumber, 6)} per turn</p>
+        <p>Active generators: A: {resourceGeneratorsA} | B: {resourceGeneratorsB}</p>
         <p>Limit: 20 gold max</p>
       </div>
     </div>

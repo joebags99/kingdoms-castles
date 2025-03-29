@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { generateBoard, hexToPixel, Hex } from '../game-logic/board';
+import { generateBoard, hexToPixel, Hex, toggleResourceGeneration } from '../game-logic/board';
 import { useGame } from '../game-logic/GameContext';
 import '../styles/Board.css';
 
@@ -42,13 +42,13 @@ const Board: React.FC = () => {
     };
   };
   
-// Generate the board when component mounts with balanced layout
-useEffect(() => {
-  const boardWidth = 15;  // Horizontal extent (columns)
-  const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
-  const newBoard = generateBoard(boardWidth, boardHeight);
-  dispatch({ type: 'SET_BOARD', payload: newBoard });
-}, [dispatch]);
+  // Generate the board when component mounts with balanced layout
+  useEffect(() => {
+    const boardWidth = 15;  // Horizontal extent (columns)
+    const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
+    const newBoard = generateBoard(boardWidth, boardHeight);
+    dispatch({ type: 'SET_BOARD', payload: newBoard });
+  }, [dispatch]);
   
   // Adjust hex size when window or container resizes
   useEffect(() => {
@@ -82,9 +82,11 @@ useEffect(() => {
   const getHexColor = (hex: Hex) => {
     // If this is part of a capital, use a brighter/highlighted color
     if (hex.capitalOwner === 'A') {
-      return '#9A0000'; // Brighter Royal Red for Player A's capital
+      // Resource generating hexes are brighter
+      return hex.generateResource ? '#CC0000' : '#9A0000';
     } else if (hex.capitalOwner === 'B') {
-      return '#FFB733'; // Brighter Belaklara Gold for Player B's capital
+      // Resource generating hexes are brighter
+      return hex.generateResource ? '#FFD700' : '#FFB733';
     }
     
     // If not part of a capital, use standard zone colors
@@ -97,6 +99,14 @@ useEffect(() => {
         return '#193B1C'; // Guardian Green for neutral zones
       default:
         return '#FBFBD7'; // Divine Light White as fallback
+    }
+  };
+
+  // Handle hex click to toggle resource generation
+  const handleHexClick = (hex: Hex) => {
+    if (hex.capitalOwner) {
+      const updatedBoard = toggleResourceGeneration(state.board, hex.q, hex.r);
+      dispatch({ type: 'SET_BOARD', payload: updatedBoard });
     }
   };
 
@@ -139,6 +149,7 @@ useEffect(() => {
                 key={hex.id} 
                 transform={`translate(${x}, ${y})`}
                 className="hex-group"
+                onClick={() => handleHexClick(hex)}
               >
                 <polygon
                   points={hexPoints(hexSize)}
