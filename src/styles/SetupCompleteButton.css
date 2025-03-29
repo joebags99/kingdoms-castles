@@ -1,0 +1,33 @@
+.setup-complete-container {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .setup-complete-button {
+    padding: 12px 24px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    background-color: var(--royal-red);
+    color: var(--divine-light);
+    border: 2px solid var(--belaklara-gold);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 250px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .setup-complete-button:hover:not(:disabled) {
+    background-color: #7F0000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .setup-complete-button:disabled {
+    background-color: #333;
+    color: #666;
+    border-color: #444;
+    cursor: not-allowed;
+    box-shadow: none;
+  }

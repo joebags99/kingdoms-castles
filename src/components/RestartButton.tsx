@@ -7,8 +7,9 @@ const RestartButton: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const resetGame = () => {
-    // Default to Player A as starting player when manually restarting
-    dispatch({ type: 'RESET_GAME', payload: { startingPlayer: 'A' } });
+    // Just reset the game and don't start it immediately
+    // User will need to click the start button again
+    dispatch({ type: 'RESET_GAME' });
     setShowConfirm(false);
   };
 

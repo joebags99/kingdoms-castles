@@ -7,24 +7,34 @@ import { GamePhase } from './constants'; // Import the game phase enum
 export interface GameState {
   currentPlayer: 'A' | 'B';
   currentPhase: GamePhase;
-  turnNumber: number;
+  turnNumber: {
+    A: number,
+    B: number
+  };
   board: Hex[];
   resources: {
     A: { gold: number },
     B: { gold: number }
   };
+  gameStarted: boolean;
+  setupComplete: boolean;
 }
 
 // Initial state for the game
 const initialGameState: GameState = {
   currentPlayer: 'A', // Player A starts
-  currentPhase: GamePhase.Resource, // Game begins with Resource phase
-  turnNumber: 1, // First turn
+  currentPhase: GamePhase.Setup, // Game begins with Setup phase
+  turnNumber: {
+    A: 0,  // Start at turn 0
+    B: 0   // Start at turn 0
+  },
   board: [], // Empty board to start
   resources: {
-    A: { gold: 5 },
-    B: { gold: 5 }
-  }
+    A: { gold: 0 },
+    B: { gold: 0 }
+  },
+  gameStarted: false,
+  setupComplete: false
 };
 
 // Define the types of actions we can dispatch
@@ -33,7 +43,9 @@ type GameAction =
   | { type: 'END_PHASE' }
   | { type: 'COLLECT_RESOURCES' }
   | { type: 'SET_BOARD', payload: Hex[] }
-  | { type: 'RESET_GAME', payload?: { startingPlayer: 'A' | 'B' } };
+  | { type: 'RESET_GAME', payload?: { startingPlayer: 'A' | 'B' } }
+  | { type: 'START_GAME', payload: { startingPlayer: 'A' | 'B' } }
+  | { type: 'COMPLETE_SETUP' };
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -44,28 +56,49 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       const nextIndex = (currentIndex + 1) % phases.length;
       const nextPhase = phases[nextIndex];
       
-      // If we're going from End back to Resource, we change players and increment turn
-      if (nextPhase === GamePhase.Resource && state.currentPhase === GamePhase.End) {
-        const newPlayer: 'A' | 'B' = state.currentPlayer === 'A' ? 'B' : 'A';
-        const newTurnNumber = newPlayer === 'A' ? state.turnNumber + 1 : state.turnNumber;
+      // Skip the Setup phase when cycling through phases after setup is complete
+      const phaseToUse = (nextPhase === GamePhase.Setup && state.setupComplete) 
+        ? GamePhase.Resource 
+        : nextPhase;
+      
+      let newState = { ...state, currentPhase: phaseToUse };
+      
+      // If we're entering the Resource phase for any player
+      if (phaseToUse === GamePhase.Resource) {
+        // If we're coming from End phase, switch players
+        if (state.currentPhase === GamePhase.End) {
+          const newPlayer: 'A' | 'B' = state.currentPlayer === 'A' ? 'B' : 'A';
+          
+          // Switch to the new player
+          newState = {
+            ...newState,
+            currentPlayer: newPlayer
+          };
+        }
         
-        // First update player and turn
-        const playerChangedState: GameState = {
-          ...state,
-          currentPhase: nextPhase,
-          currentPlayer: newPlayer,
-          turnNumber: newTurnNumber,
-        };
-        
-        // Then collect resources for the new player
-        return gameReducer(playerChangedState, { type: 'COLLECT_RESOURCES' });
+        // If setup is complete, increment turn and collect resources
+        if (state.setupComplete) {
+          // Always increment the current player's turn when they enter Resource phase (after setup)
+          const currentPlayer = newState.currentPlayer;
+          const newTurn = {
+            ...newState.turnNumber,
+            [currentPlayer]: newState.turnNumber[currentPlayer] + 1
+          };
+          
+          console.log(`Player ${currentPlayer}'s turn incremented to ${newTurn[currentPlayer]}`);
+          
+          // Update turn number and then collect resources
+          newState = {
+            ...newState,
+            turnNumber: newTurn
+          };
+          
+          // Then collect resources
+          return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
+        }
       }
       
-      // For all other phase transitions, just update the phase
-      return {
-        ...state,
-        currentPhase: nextPhase,
-      };
+      return newState;
     }
       
     case 'END_PHASE':
@@ -75,16 +108,23 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'COLLECT_RESOURCES': {
       const player = state.currentPlayer;
       
+      // If the game hasn't officially started, don't collect resources
+      if (!state.gameStarted || !state.setupComplete) {
+        console.log("Game not fully started yet, skipping resource collection");
+        return state;
+      }
+      
       // Count how many hexes are generating resources for this player
       const resourceGeneratingHexes = state.board.filter(
         hex => hex.capitalOwner === player && hex.generateResource === true
       ).length;
       
-      // Limit active generators by turn number
+      // Limit active generators by the player's current turn number
       // Turn 1 = 1 generator, Turn 2 = 2 generators, etc.
-      const activeGenerators = Math.min(resourceGeneratingHexes, state.turnNumber);
+      const playerTurnNumber = state.turnNumber[player];
+      const activeGenerators = Math.min(resourceGeneratingHexes, playerTurnNumber);
       
-      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generators, but only ${activeGenerators} are active in turn ${state.turnNumber}`);
+      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generators, but only ${activeGenerators} are active in their turn ${playerTurnNumber}`);
       
       // Each active generator provides 1 gold
       const resourceGain = activeGenerators;
@@ -113,24 +153,62 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         board: action.payload,
       };
+    
+    case 'START_GAME': {
+      console.log(`Starting game with player ${action.payload.startingPlayer} going first`);
+      
+      // Set up the initial game state with the specified starting player
+      return {
+        ...state,
+        currentPlayer: action.payload.startingPlayer,
+        gameStarted: true,
+        resources: {
+          A: { gold: 0 },
+          B: { gold: 0 }
+        }
+      };
+    }
+    
+    case 'COMPLETE_SETUP': {
+      console.log("Setup complete, moving to main game phases");
+      
+      // Mark setup as complete and move to resource phase
+      const newState = {
+        ...state,
+        setupComplete: true,
+        currentPhase: GamePhase.Resource
+      };
+      
+      // Collect initial resources for the starting player
+      return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
+    }
       
     case 'RESET_GAME': {
       // Create a fresh game state
       const newState = {
         ...initialGameState,
-        // Start with 0 resources instead of 5
+        // Start with 0 resources
         resources: {
           A: { gold: 0 },
           B: { gold: 0 }
         },
         // Use the provided starting player or default to 'A'
         currentPlayer: action.payload?.startingPlayer || 'A',
+        // Reset turn numbers to 0
+        turnNumber: {
+          A: 0,
+          B: 0
+        },
         // Empty board
-        board: []
+        board: [],
+        // Reset game started flag
+        gameStarted: false,
+        setupComplete: false,
+        currentPhase: GamePhase.Setup
       };
       
       // Log the reset
-      console.log(`Game reset. ${newState.currentPlayer === 'A' ? 'Player A' : 'Player B'} will go first.`);
+      console.log(`Game reset. Ready for new game.`);
       
       return newState;
     }

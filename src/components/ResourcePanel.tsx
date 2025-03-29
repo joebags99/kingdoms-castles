@@ -27,11 +27,8 @@ const ResourcePanel: React.FC = () => {
   const resourceGeneratorsA = countResourceGenerators('A');
   const resourceGeneratorsB = countResourceGenerators('B');
   
-  // For debugging purposes
-  console.log('Current resource state:', state.resources);
-  console.log('Player A gold:', state.resources.A.gold);
-  console.log('Player B gold:', state.resources.B.gold);
-  console.log('Resource generators: A:', resourceGeneratorsA, 'B:', resourceGeneratorsB);
+  const activeGeneratorsA = Math.min(resourceGeneratorsA, state.turnNumber.A);
+  const activeGeneratorsB = Math.min(resourceGeneratorsB, state.turnNumber.B);
   
   return (
     <div className="resource-panel">
@@ -41,7 +38,7 @@ const ResourcePanel: React.FC = () => {
         <div className="player-resource-section">
           <div className="player-label player-A-label">
             <span className="player-indicator player-A"></span>
-            Player A
+            Player A (Turn {state.turnNumber.A})
           </div>
           <div className="resource-list">
             {renderResourceAmount('A', 'Gold', state.resources.A.gold)}
@@ -52,7 +49,7 @@ const ResourcePanel: React.FC = () => {
         <div className="player-resource-section">
           <div className="player-label player-B-label">
             <span className="player-indicator player-B"></span>
-            Player B
+            Player B (Turn {state.turnNumber.B})
           </div>
           <div className="resource-list">
             {renderResourceAmount('B', 'Gold', state.resources.B.gold)}
@@ -62,8 +59,8 @@ const ResourcePanel: React.FC = () => {
       </div>
       
       <div className="resource-info">
-        <p>Active generators: {Math.min(state.turnNumber, 6)} / 6 max</p>
-        <p>Resources: A: {Math.min(resourceGeneratorsA, state.turnNumber)} | B: {Math.min(resourceGeneratorsB, state.turnNumber)}</p>
+        <p>Active generators: A: {activeGeneratorsA}/{resourceGeneratorsA} | B: {activeGeneratorsB}/{resourceGeneratorsB}</p>
+        <p>Max generators: 6 per player</p>
         <p>Limit: 20 gold max</p>
       </div>
     </div>

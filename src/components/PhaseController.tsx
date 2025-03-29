@@ -1,13 +1,14 @@
 import React from 'react';
 import { useGame } from '../game-logic/GameContext';
 import { GamePhase } from '../game-logic/constants';
+import SetupCompleteButton from './SetupCompleteButton';
 import '../styles/PhaseController.css';
 
 const PhaseController: React.FC = () => {
   const { state, dispatch } = useGame();
   
   // In the handleNextPhase function
-const handleNextPhase = () => {
+  const handleNextPhase = () => {
     console.log("Moving to next phase from", state.currentPhase);
     
     // If we're in End phase and about to cycle to Resource, log this special case
@@ -21,6 +22,8 @@ const handleNextPhase = () => {
   // Get a more user-friendly display name for each phase
   const getPhaseDisplayName = (phase: GamePhase): string => {
     switch (phase) {
+      case GamePhase.Setup:
+        return 'Setup Phase';
       case GamePhase.Resource:
         return 'Resource Phase';
       case GamePhase.Draw:
@@ -43,6 +46,8 @@ const handleNextPhase = () => {
   // Get a description of what actions are available in each phase
   const getPhaseDescription = (phase: GamePhase): string => {
     switch (phase) {
+      case GamePhase.Setup:
+        return 'Place your capitals and prepare your kingdom for the game.';
       case GamePhase.Resource:
         return 'Collect resources from your buildings and territories.';
       case GamePhase.Draw:
@@ -62,12 +67,15 @@ const handleNextPhase = () => {
     }
   };
   
+  // Get current turn number for the active player
+  const currentPlayerTurn = state.turnNumber[state.currentPlayer];
+  
   return (
     <div className="phase-controller">
       <div className="phase-turn-info">
         <div className="turn-display">
           <span className="turn-label">Turn</span>
-          <span className="turn-number">{state.turnNumber}</span>
+          <span className="turn-number">{currentPlayerTurn}</span>
         </div>
         <div className={`player-display player-${state.currentPlayer}`}>
           <span className="player-dot"></span>
@@ -80,9 +88,16 @@ const handleNextPhase = () => {
         <p className="phase-description">{getPhaseDescription(state.currentPhase)}</p>
       </div>
       
-      <button className="next-phase-button" onClick={handleNextPhase}>
-        Next Phase
-      </button>
+      {state.currentPhase === GamePhase.Setup ? (
+        <SetupCompleteButton />
+      ) : (
+        <button 
+          className="next-phase-button" 
+          onClick={handleNextPhase}
+        >
+          Next Phase
+        </button>
+      )}
     </div>
   );
 };
