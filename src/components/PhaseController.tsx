@@ -11,9 +11,9 @@ const PhaseController: React.FC = () => {
   const handleNextPhase = () => {
     console.log("Moving to next phase from", state.currentPhase);
     
-    // If we're in End phase and about to cycle to Resource, log this special case
-    if (state.currentPhase === GamePhase.End) {
-      console.log("Completing turn cycle, collecting resources for next player");
+    // If we're leaving the Resource phase, show a message about collecting resources
+    if (state.currentPhase === GamePhase.Resource) {
+      console.log("Collecting resources as player leaves Resource phase");
     }
     
     dispatch({ type: 'NEXT_PHASE' });
@@ -49,7 +49,7 @@ const PhaseController: React.FC = () => {
       case GamePhase.Setup:
         return 'Place your capitals and prepare your kingdom for the game.';
       case GamePhase.Resource:
-        return 'Collect resources from your buildings and territories.';
+        return 'Resource generators will activate at the end of this phase. Resources from active generators are based on turn number.';
       case GamePhase.Draw:
         return 'Draw a card from your deck to add to your hand.';
       case GamePhase.Dev1:
@@ -69,6 +69,23 @@ const PhaseController: React.FC = () => {
   
   // Get current turn number for the active player
   const currentPlayerTurn = state.turnNumber[state.currentPlayer];
+  
+  // Show a message about what will happen when you click Next Phase
+  const getNextPhaseActionDescription = () => {
+    if (state.currentPhase === GamePhase.Resource) {
+      return `Collect resources from ${Math.min(currentPlayerTurn, 6)} generator(s)`;
+    }
+    if (state.currentPhase === GamePhase.End) {
+      const nextPlayer = state.currentPlayer === 'A' ? 'B' : 'A';
+      return `Switch to Player ${nextPlayer}`;
+    }
+    return "Proceed to next phase";
+  };
+  
+  // Check if the button should be disabled
+  const isNextPhaseButtonDisabled = () => {
+    return state.currentPhase === GamePhase.Setup;
+  };
   
   return (
     <div className="phase-controller">
@@ -94,8 +111,9 @@ const PhaseController: React.FC = () => {
         <button 
           className="next-phase-button" 
           onClick={handleNextPhase}
+          disabled={isNextPhaseButtonDisabled()}
         >
-          Next Phase
+          {getNextPhaseActionDescription()}
         </button>
       )}
     </div>

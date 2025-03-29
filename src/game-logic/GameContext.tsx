@@ -18,6 +18,8 @@ export interface GameState {
   };
   gameStarted: boolean;
   setupComplete: boolean;
+  // Add a flag to track if resources were collected this turn
+  resourcesCollectedThisTurn: boolean;
 }
 
 // Initial state for the game
@@ -34,14 +36,14 @@ const initialGameState: GameState = {
     B: { gold: 0 }
   },
   gameStarted: false,
-  setupComplete: false
+  setupComplete: false,
+  resourcesCollectedThisTurn: false
 };
 
 // Define the types of actions we can dispatch
 type GameAction = 
   | { type: 'NEXT_PHASE' }
   | { type: 'END_PHASE' }
-  | { type: 'COLLECT_RESOURCES' }
   | { type: 'SET_BOARD', payload: Hex[] }
   | { type: 'RESET_GAME', payload?: { startingPlayer: 'A' | 'B' } }
   | { type: 'START_GAME', payload: { startingPlayer: 'A' | 'B' } }
@@ -63,39 +65,66 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       let newState = { ...state, currentPhase: phaseToUse };
       
-      // If we're entering the Resource phase for any player
-      if (phaseToUse === GamePhase.Resource) {
-        // If we're coming from End phase, switch players
-        if (state.currentPhase === GamePhase.End) {
-          const newPlayer: 'A' | 'B' = state.currentPlayer === 'A' ? 'B' : 'A';
-          
-          // Switch to the new player
-          newState = {
-            ...newState,
-            currentPlayer: newPlayer
-          };
-        }
+      // If we're LEAVING the End phase and going to Resource, switch players and increment turn
+      if (state.currentPhase === GamePhase.End && phaseToUse === GamePhase.Resource) {
+        const newPlayer: 'A' | 'B' = state.currentPlayer === 'A' ? 'B' : 'A';
         
-        // If setup is complete, increment turn and collect resources
-        if (state.setupComplete) {
-          // Always increment the current player's turn when they enter Resource phase (after setup)
-          const currentPlayer = newState.currentPlayer;
-          const newTurn = {
-            ...newState.turnNumber,
-            [currentPlayer]: newState.turnNumber[currentPlayer] + 1
-          };
-          
-          console.log(`Player ${currentPlayer}'s turn incremented to ${newTurn[currentPlayer]}`);
-          
-          // Update turn number and then collect resources
-          newState = {
-            ...newState,
-            turnNumber: newTurn
-          };
-          
-          // Then collect resources
-          return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
-        }
+        // Increment the turn number for the new player
+        const newTurn = {
+          ...state.turnNumber,
+          [newPlayer]: state.turnNumber[newPlayer] + 1
+        };
+        
+        console.log(`Player ${newPlayer}'s turn incremented to ${newTurn[newPlayer]}`);
+        
+        // Switch to the new player and update turn number
+        newState = {
+          ...newState,
+          currentPlayer: newPlayer,
+          turnNumber: newTurn,
+          // Reset the resource collection flag for the new turn
+          resourcesCollectedThisTurn: false
+        };
+      }
+      
+      // If we're LEAVING the Resource phase, collect resources for the next phase
+      // But only if we haven't collected resources already this turn (from setup completion)
+      if (state.currentPhase === GamePhase.Resource && state.setupComplete && !state.resourcesCollectedThisTurn) {
+        const player = state.currentPlayer;
+        
+        // Count how many hexes are generating resources for this player
+        const resourceGeneratingHexes = state.board.filter(
+          hex => hex.capitalOwner === player && hex.generateResource === true
+        ).length;
+        
+        // Limit active generators by turn number
+        const playerTurnNumber = state.turnNumber[player];
+        const activeGenerators = Math.min(resourceGeneratingHexes, playerTurnNumber);
+        
+        console.log(`Resource phase ending: Player ${player} gains resources from ${activeGenerators} active generators in turn ${playerTurnNumber}`);
+        
+        // Calculate resource gain
+        const resourceGain = activeGenerators;
+        
+        // Add resources to the player
+        const currentGold = state.resources[player].gold;
+        const newGold = Math.min(currentGold + resourceGain, 20);
+        
+        console.log(`Player ${player} gold: ${currentGold} + ${resourceGain} = ${newGold}`);
+        
+        // Update the resources in our state
+        newState = {
+          ...newState,
+          resources: {
+            ...newState.resources,
+            [player]: {
+              ...newState.resources[player],
+              gold: newGold
+            }
+          },
+          // Mark that we've collected resources this turn
+          resourcesCollectedThisTurn: true
+        };
       }
       
       return newState;
@@ -104,49 +133,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'END_PHASE':
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
-
-    case 'COLLECT_RESOURCES': {
-      const player = state.currentPlayer;
-      
-      // If the game hasn't officially started, don't collect resources
-      if (!state.gameStarted || !state.setupComplete) {
-        console.log("Game not fully started yet, skipping resource collection");
-        return state;
-      }
-      
-      // Count how many hexes are generating resources for this player
-      const resourceGeneratingHexes = state.board.filter(
-        hex => hex.capitalOwner === player && hex.generateResource === true
-      ).length;
-      
-      // Limit active generators by the player's current turn number
-      // Turn 1 = 1 generator, Turn 2 = 2 generators, etc.
-      const playerTurnNumber = state.turnNumber[player];
-      const activeGenerators = Math.min(resourceGeneratingHexes, playerTurnNumber);
-      
-      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generators, but only ${activeGenerators} are active in their turn ${playerTurnNumber}`);
-      
-      // Each active generator provides 1 gold
-      const resourceGain = activeGenerators;
-      
-      // Calculate new gold amount, capped at 20
-      const currentGold = state.resources[player].gold;
-      const newGold = Math.min(currentGold + resourceGain, 20);
-      
-      console.log(`Player ${player} gold: ${currentGold} + ${resourceGain} = ${newGold}`);
-      
-      // Create a new state object with updated resources
-      return {
-        ...state,
-        resources: {
-          ...state.resources,
-          [player]: { 
-            ...state.resources[player],
-            gold: newGold
-          }
-        }
-      };
-    }
       
     case 'SET_BOARD':
       return {
@@ -172,15 +158,46 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'COMPLETE_SETUP': {
       console.log("Setup complete, moving to main game phases");
       
-      // Mark setup as complete and move to resource phase
-      const newState = {
+      // Mark setup as complete
+      const setupCompleteState: GameState = {
         ...state,
         setupComplete: true,
         currentPhase: GamePhase.Resource
       };
       
-      // Collect initial resources for the starting player
-      return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
+      // Get the current player
+      const player = setupCompleteState.currentPlayer;
+      
+      // Count how many hexes are generating resources for this player
+      const resourceGeneratingHexes = setupCompleteState.board.filter(
+        hex => hex.capitalOwner === player && hex.generateResource === true
+      ).length;
+      
+      // Since this is turn 1, limit active generators to 1
+      const activeGenerators = Math.min(resourceGeneratingHexes, 1);
+      
+      console.log(`Initial resource collection: Player ${player} has ${resourceGeneratingHexes} resource generators, but only ${activeGenerators} are active for the first turn`);
+      
+      // Calculate resource gain (1 per active generator)
+      const resourceGain = activeGenerators;
+      
+      // Add the resources to the current player
+      return {
+        ...setupCompleteState,
+        turnNumber: {
+          ...setupCompleteState.turnNumber,
+          [player]: 1 // Set to turn 1 explicitly
+        },
+        resources: {
+          ...setupCompleteState.resources,
+          [player]: {
+            ...setupCompleteState.resources[player],
+            gold: resourceGain
+          }
+        },
+        // Mark that resources have been collected this turn
+        resourcesCollectedThisTurn: true
+      };
     }
       
     case 'RESET_GAME': {
@@ -204,7 +221,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         // Reset game started flag
         gameStarted: false,
         setupComplete: false,
-        currentPhase: GamePhase.Setup
+        currentPhase: GamePhase.Setup,
+        resourcesCollectedThisTurn: false
       };
       
       // Log the reset
