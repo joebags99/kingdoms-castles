@@ -217,83 +217,67 @@ const handleHexClick = (hex: Hex) => {
     return;
   }
   
-  // Combat phase - select unit for attack
-  if (state.currentPhase === GamePhase.Combat) {
-    const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
-    
-    // If clicking on one of our units, select it (auto-canceling any pending attack)
-    if (unitInHex && unitInHex.owner === state.currentPlayer) {
-      // Automatically cancel any pending attack when selecting a new unit
-      setPendingAttack(null);
-      dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
-      return;
-    }
-    
-    // If a unit is selected and clicking on an enemy unit
-    if (state.selectedUnit && unitInHex && unitInHex.owner !== state.currentPlayer) {
-      // Check if this is a valid attack target
-      if (attackableUnits.includes(unitInHex.id)) {
-        setPendingAttack(unitInHex.id);
+      // Combat phase - select unit for attack and handle direct attacks
+    if (state.currentPhase === GamePhase.Combat) {
+      const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+      
+      // If clicking on one of our units, select it
+      if (unitInHex && unitInHex.owner === state.currentPlayer) {
+        dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
+        return;
       }
+      
+      // If a unit is selected and clicking on an enemy unit
+      if (state.selectedUnit && unitInHex && unitInHex.owner !== state.currentPlayer) {
+        // Check if this is a valid attack target
+        if (attackableUnits.includes(unitInHex.id)) {
+          // Add attack directly without confirmation
+          setAttacks([...attacks, { 
+            attackerId: state.selectedUnit, 
+            defenderId: unitInHex.id 
+          }]);
+          
+          // Clear selection after declaring attack
+          dispatch({ type: 'SELECT_UNIT', payload: null });
+        }
+        return;
+      }
+      
+      // Clear selection if clicking on empty hex
+      dispatch({ type: 'SELECT_UNIT', payload: null });
       return;
     }
-    
-    // Clear pending attack and selection if clicking on empty hex
-    setPendingAttack(null);
-    dispatch({ type: 'SELECT_UNIT', payload: null });
-  }
-  
-  // Select hex/unit in other phases
-  setSelectedHex({ q, r });
-  const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
-  if (unitInHex && (unitInHex.owner === state.currentPlayer || state.currentPhase === GamePhase.Combat)) {
-    dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
-  }
+      
+    // Select hex/unit in other phases
+    setSelectedHex({ q, r });
+    const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+    if (unitInHex && (unitInHex.owner === state.currentPlayer || state.currentPhase === GamePhase.Combat)) {
+      dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
+    }
+
+    // Remove an attack
+const removeAttack = (attackerId: string, defenderId: string) => {
+  setAttacks(attacks.filter(attack => 
+    !(attack.attackerId === attackerId && attack.defenderId === defenderId)
+  ));
 };
 
-  // Confirm an attack
-  const confirmAttack = () => {
-    if (state.selectedUnit && pendingAttack) {
-      // Add to attacks array rather than executing immediately
-      setAttacks([...attacks, { 
-        attackerId: state.selectedUnit, 
-        defenderId: pendingAttack 
-      }]);
-      
-      // Clear pending attack and selected unit
-      setPendingAttack(null);
-      dispatch({ type: 'SELECT_UNIT', payload: null });
-    }
-  };
-
-  // Cancel an attack
-  const cancelAttack = () => {
-    setPendingAttack(null);
-  };
+// Execute all planned attacks
+const executeAttacks = () => {
+  console.log(`Executing ${attacks.length} planned attacks`);
   
-  // Remove an attack
-  const removeAttack = (attackerId: string, defenderId: string) => {
-    setAttacks(attacks.filter(attack => 
-      !(attack.attackerId === attackerId && attack.defenderId === defenderId)
-    ));
-  };
-  
-  // Execute all planned attacks
-  const executeAttacks = () => {
-    console.log(`Executing ${attacks.length} planned attacks`);
-    
-    // Actually execute the attacks when ending the combat phase
-    attacks.forEach(attack => {
-      console.log(`Executing attack from ${attack.attackerId} to ${attack.defenderId}`);
-      dispatch({
-        type: 'ATTACK_UNIT',
-        payload: { attackerId: attack.attackerId, defenderId: attack.defenderId }
-      });
+  // Actually execute the attacks when ending the combat phase
+  attacks.forEach(attack => {
+    console.log(`Executing attack from ${attack.attackerId} to ${attack.defenderId}`);
+    dispatch({
+      type: 'ATTACK_UNIT',
+      payload: { attackerId: attack.attackerId, defenderId: attack.defenderId }
     });
-    
-    // Clear the attacks
-    setAttacks([]);
-  };
+  });
+  
+  // Clear the attacks
+  setAttacks([]);
+};
   
   // When ending the combat phase, execute all attacks
   useEffect(() => {
@@ -478,79 +462,19 @@ const handleHexClick = (hex: Hex) => {
     const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
     const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
     
-    // Find the midpoint between the two units for the confirmation button
-    const midX = (ax + dx) / 2;
-    const midY = (ay + dy) / 2;
-    
     return (
       <g className="attack-confirmation">
-        {/* Dashed line showing attack path */}
+        {/* Simple dashed line showing potential attack */}
         <line
           x1={ax}
           y1={ay}
           x2={dx}
           y2={dy}
-          stroke="#FF3333"
-          strokeWidth="3"
-          strokeDasharray="7,4"
-          opacity="0.9"
-          filter="url(#attackGlow)"
+          stroke="#FF9900"
+          strokeWidth="2"
+          strokeDasharray="4,3"
+          opacity="0.7"
         />
-        
-        {/* Attack action buttons */}
-        <g transform={`translate(${midX}, ${midY})`}>
-          <g onClick={confirmAttack} className="attack-confirm-button" transform="translate(0, -20)">
-            {/* Confirm button */}
-            <circle 
-              cx="0" 
-              cy="0" 
-              r="18" 
-              fill="#006600" 
-              stroke="#FFFFFF" 
-              strokeWidth="2"
-              style={{ cursor: 'pointer' }}
-              filter="url(#unitShadow)"
-            />
-            <text
-              x="0"
-              y="1"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#FFFFFF"
-              fontSize="16"
-              fontWeight="bold"
-              style={{ pointerEvents: 'none' }}
-            >
-              ✓
-            </text>
-          </g>
-          
-          {/* Cancel button */}
-          <g onClick={cancelAttack} className="attack-cancel-button" transform="translate(0, 20)">
-            <circle 
-              cx="0" 
-              cy="0" 
-              r="18" 
-              fill="#990000" 
-              stroke="#FFFFFF" 
-              strokeWidth="2"
-              style={{ cursor: 'pointer' }}
-              filter="url(#unitShadow)"
-            />
-            <text
-              x="0"
-              y="1"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#FFFFFF"
-              fontSize="16"
-              fontWeight="bold"
-              style={{ pointerEvents: 'none' }}
-            >
-              ✕
-            </text>
-          </g>
-        </g>
       </g>
     );
   };
@@ -606,51 +530,43 @@ const renderPhaseOverlay = () => {
       const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
       const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
       
-      // Calculate the direction vector
-      const vx = dx - ax;
-      const vy = dy - ay;
-      
-      // Calculate the length of the vector
-      const length = Math.sqrt(vx * vx + vy * vy);
-      
-      // Normalize the vector
-      const nvx = vx / length;
-      const nvy = vy / length;
-      
-      // Calculate the start and end points, slightly offset from unit centers
-      // to avoid overlapping with the units
-      const radius = hexSize * 0.5;
-      const startX = ax + nvx * radius;
-      const startY = ay + nvy * radius;
-      const endX = dx - nvx * radius;
-      const endY = dy - nvy * radius;
-      
+      // Create a group to handle the click event
       return (
-        <g key={`attack-${index}`} className="planned-attack">
-          {/* Create a wider "hit area" for the line to make it easier to click */}
+        <g 
+          key={`attack-${index}`} 
+          className="planned-attack"
+          onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
+          style={{ cursor: 'pointer' }}
+        >
+          {/* Invisible wider line for better hit detection */}
           <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
+            x1={ax}
+            y1={ay}
+            x2={dx}
+            y2={dy}
             stroke="transparent"
             strokeWidth="20"
-            style={{ cursor: 'pointer' }}
-            onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
+            style={{ pointerEvents: 'all' }}
           />
           
-          {/* Arrow line connecting attacker to defender */}
+          {/* Visible line */}
           <line
-            x1={startX}
-            y1={startY}
-            x2={endX}
-            y2={endY}
+            x1={ax}
+            y1={ay}
+            x2={dx}
+            y2={dy}
             stroke="#FF3333"
-            strokeWidth="4"
-            strokeDasharray="8,4"
-            markerEnd="url(#arrowhead)"
-            opacity="0.9"
+            strokeWidth="3"
             className="attack-line"
+            style={{ pointerEvents: 'none' }} // Make sure this doesn't interfere with clicks
+          />
+          
+          {/* Arrow at the end */}
+          <polygon 
+            points={`${dx-10},${dy-5} ${dx},${dy} ${dx-10},${dy+5}`}
+            transform={`rotate(${Math.atan2(dy-ay, dx-ax) * 180/Math.PI + 90}, ${dx}, ${dy})`}
+            fill="#FF3333"
+            style={{ pointerEvents: 'none' }} // Make sure this doesn't interfere with clicks
           />
         </g>
       );
@@ -723,18 +639,16 @@ const renderPhaseOverlay = () => {
         >
           {/* Define arrowhead marker */}
           <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="5"
-              orient="auto"
-              markerUnits="strokeWidth"
-            >
-              <path d="M0,0 L0,10 L10,5 Z" fill="#FF3333" />
-            </marker>
-            
+          <marker
+            id="arrowhead"
+            markerWidth="8"
+            markerHeight="8"
+            refX="7"
+            refY="4"
+            orient="auto"
+          >
+            <path d="M0,0 L8,4 L0,8 Z" fill="#FF3333" />
+          </marker>
             <filter id="unitShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="black" floodOpacity="0.5" />
             </filter>
