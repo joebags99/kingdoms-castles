@@ -1,3 +1,5 @@
+// src/game-logic/GameContext.tsx
+
 import React, { createContext, useReducer, useContext, ReactNode } from 'react';
 import { Hex } from './board'; // Import Hex from board.ts
 import { GamePhase } from './constants'; // Import the game phase enum
@@ -44,26 +46,22 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       // If we're going from End back to Resource, we change players and increment turn
       if (nextPhase === GamePhase.Resource && state.currentPhase === GamePhase.End) {
-        return {
+        const newPlayer: 'A' | 'B' = state.currentPlayer === 'A' ? 'B' : 'A';
+        const newTurnNumber = newPlayer === 'A' ? state.turnNumber + 1 : state.turnNumber;
+        
+        // First update player and turn
+        const playerChangedState = {
           ...state,
           currentPhase: nextPhase,
-          currentPlayer: state.currentPlayer === 'A' ? 'B' : 'A',
-          turnNumber: state.currentPlayer === 'B' ? state.turnNumber + 1 : state.turnNumber,
-        };
-      }
-      
-      // If we're entering the Resource phase, automatically collect resources
-      if (nextPhase === GamePhase.Resource) {
-        // First update the phase
-        const newState = {
-          ...state,
-          currentPhase: nextPhase,
+          currentPlayer: newPlayer,
+          turnNumber: newTurnNumber,
         };
         
-        // Then collect resources by calling the reducer recursively
-        return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
+        // Then collect resources for the new player
+        return gameReducer(playerChangedState, { type: 'COLLECT_RESOURCES' });
       }
       
+      // For all other phase transitions, just update the phase
       return {
         ...state,
         currentPhase: nextPhase,
@@ -74,7 +72,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
 
-      // In the 'COLLECT_RESOURCES' case of the gameReducer function
     case 'COLLECT_RESOURCES': {
       const player = state.currentPlayer;
       
@@ -85,15 +82,13 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       
       console.log(`Player ${player} has ${resourceGeneratingHexes} resource generating hexes`);
       
-      // Even if there are no resource generators, give a minimum income
-      // This ensures players always get some resources
+      // Base income plus additional income based on active generators
       const baseIncome = 1;
-      
-      // Resource gain per hex depends on turn number, capped at 3
-      const resourcePerHex = Math.min(state.turnNumber, 3);
+      const resourcePerGenerator = Math.min(state.turnNumber, 3);
+      const additionalIncome = resourceGeneratingHexes > 0 ? resourceGeneratingHexes * resourcePerGenerator : 0;
       
       // Calculate total resource gain
-      const resourceGain = baseIncome + (resourcePerHex * resourceGeneratingHexes);
+      const resourceGain = baseIncome + additionalIncome;
       
       // Calculate new gold amount, capped at 20
       const currentGold = state.resources[player].gold;

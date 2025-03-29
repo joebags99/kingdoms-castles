@@ -27,6 +27,12 @@ const ResourcePanel: React.FC = () => {
   const resourceGeneratorsA = countResourceGenerators('A');
   const resourceGeneratorsB = countResourceGenerators('B');
   
+  // For debugging purposes
+  console.log('Current resource state:', state.resources);
+  console.log('Player A gold:', state.resources.A.gold);
+  console.log('Player B gold:', state.resources.B.gold);
+  console.log('Resource generators: A:', resourceGeneratorsA, 'B:', resourceGeneratorsB);
+  
   return (
     <div className="resource-panel">
       <h3 className="resource-panel-title">Resources</h3>
