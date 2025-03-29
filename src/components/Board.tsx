@@ -316,12 +316,16 @@ const handleHexClick = (hex: Hex) => {
       const isAttackable = attackableUnits.includes(unit.id);
       const isPendingTarget = unit.id === pendingAttack;
       const isAttackTarget = attacks.some(attack => attack.defenderId === unit.id);
+      const isAttacker = attacks.some(attack => attack.attackerId === unit.id);
+      const isTarget = attacks.some(attack => attack.defenderId === unit.id);
       
       // Determine colors based on player and state
       const baseColor = unit.owner === 'A' ? '#990000' : '#FFCC00';
       const glowColor = isPendingTarget ? '#FF3333' : 
                       isAttackable ? '#FF9900' : 
-                      isSelected ? '#FFFFFF' : '';
+                      isSelected ? '#FFFFFF' :
+                      isAttacker ? '#FF6600' :
+                      isTarget ? '#FF0000' : '';
       
       return (
         <g 
@@ -335,6 +339,8 @@ const handleHexClick = (hex: Hex) => {
             ${isAttackable ? 'attackable' : ''}
             ${isPendingTarget ? 'pending-target' : ''}
             ${isAttackTarget ? 'attack-target' : ''}
+            ${isAttacker ? 'attacking-unit' : ''}
+            ${isTarget ? 'targeted-unit' : ''}
           `}
           onClick={(e) => {
             e.stopPropagation();
@@ -596,71 +602,56 @@ const renderPhaseOverlay = () => {
       
       if (!attacker || !defender) return null;
       
+      // Get the center coordinates of both units
       const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
       const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
       
-      // Calculate midpoint for the attack marker
-      const midX = (ax + dx) / 2;
-      const midY = (ay + dy) / 2;
+      // Calculate the direction vector
+      const vx = dx - ax;
+      const vy = dy - ay;
+      
+      // Calculate the length of the vector
+      const length = Math.sqrt(vx * vx + vy * vy);
+      
+      // Normalize the vector
+      const nvx = vx / length;
+      const nvy = vy / length;
+      
+      // Calculate the start and end points, slightly offset from unit centers
+      // to avoid overlapping with the units
+      const radius = hexSize * 0.5;
+      const startX = ax + nvx * radius;
+      const startY = ay + nvy * radius;
+      const endX = dx - nvx * radius;
+      const endY = dy - nvy * radius;
       
       return (
         <g key={`attack-${index}`} className="planned-attack">
           {/* Create a wider "hit area" for the line to make it easier to click */}
           <line
-            x1={ax}
-            y1={ay}
-            x2={dx}
-            y2={dy}
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
             stroke="transparent"
-            strokeWidth="15"
+            strokeWidth="20"
             style={{ cursor: 'pointer' }}
             onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
           />
           
           {/* Arrow line connecting attacker to defender */}
           <line
-            x1={ax}
-            y1={ay}
-            x2={dx}
-            y2={dy}
+            x1={startX}
+            y1={startY}
+            x2={endX}
+            y2={endY}
             stroke="#FF3333"
-            strokeWidth="3"
-            strokeDasharray="7,4"
+            strokeWidth="4"
+            strokeDasharray="8,4"
             markerEnd="url(#arrowhead)"
             opacity="0.9"
+            className="attack-line"
           />
-          
-          {/* Improved attack marker at midpoint */}
-          <g transform={`translate(${midX}, ${midY})`}>
-            {/* White outline/glow for better visibility */}
-            <circle 
-              r="15" 
-              fill="white" 
-              opacity="0.8"
-            />
-            {/* Main attack indicator circle */}
-            <circle 
-              r="13" 
-              fill="#990000" 
-              stroke="#FFFFFF" 
-              strokeWidth="1.5"
-              onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
-              style={{ cursor: 'pointer' }}
-              className="attack-number"
-            />
-            <text
-              x="0"
-              y="1"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#FFFFFF"
-              fontSize="14"
-              fontWeight="bold"
-              style={{ pointerEvents: 'none' }}
-            >
-              {index + 1}
-            </text>
-          </g>
         </g>
       );
     });
@@ -735,17 +726,19 @@ const renderPhaseOverlay = () => {
             <marker
               id="arrowhead"
               markerWidth="10"
-              markerHeight="8"
-              refX="8"
-              refY="4"
+              markerHeight="10"
+              refX="9"
+              refY="5"
               orient="auto"
+              markerUnits="strokeWidth"
             >
-              <polygon points="0 0, 10 4, 0 8" fill="#FF0000" />
+              <path d="M0,0 L0,10 L10,5 Z" fill="#FF3333" />
             </marker>
+            
             <filter id="unitShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="black" floodOpacity="0.5" />
             </filter>
-            {/* Add a glow filter for attack indicators */}
+            
             <filter id="attackGlow" x="-30%" y="-30%" width="160%" height="160%">
               <feGaussianBlur stdDeviation="2" result="blur" />
               <feFlood floodColor="#FF3333" floodOpacity="0.7" />
@@ -815,10 +808,10 @@ const renderPhaseOverlay = () => {
           <>
             {attacks.length > 0 ? (
               <p>
-                {`${attacks.length} attack(s) planned. Select a unit to plan more attacks or click on attack markers to cancel.`}
+                <strong>{attacks.length} attack(s) planned.</strong> Click on attack lines to cancel. Select another unit for more attacks.
               </p>
             ) : pendingAttack ? (
-              <p>Click the checkmark to confirm attack or select another unit to cancel.</p>
+              <p>Click the green checkmark to confirm attack or the red X to cancel.</p>
             ) : (
               <p>Select your unit, then click on an adjacent enemy unit to attack.</p>
             )}

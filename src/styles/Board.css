@@ -162,15 +162,51 @@
 
 .attack-line {
   stroke: #FF3333;
-  stroke-width: 3;
-  stroke-dasharray: 7,4;
-  marker-end: url(#arrowhead);
+  stroke-width: 4;
+  stroke-dasharray: 8,4;
   opacity: 0.9;
-  filter: url(#attackGlow);
   pointer-events: none;
+  animation: pulse-line 2s infinite;
+}
+
+.attack-number {
+  animation: attack-indicator-pulse 2s infinite;
+  filter: url(#unitShadow);
+}
+
+.planned-attack line {
+  animation: attack-line-pulse 2s infinite;
+}
+
+.attacking-unit circle {
+  stroke: #FF6600;
+  stroke-width: 2px;
+}
+
+.targeted-unit circle {
+  stroke: #FF0000;
+  stroke-width: 2px;
 }
 
 /* ====== Animations ====== */
+@keyframes pulse-line {
+  0% { stroke-opacity: 0.7; stroke-width: 3; }
+  50% { stroke-opacity: 1; stroke-width: 5; }
+  100% { stroke-opacity: 0.7; stroke-width: 3; }
+}
+
+@keyframes attack-indicator-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes attack-line-pulse {
+  0% { stroke-opacity: 0.6; stroke-width: 4; }
+  50% { stroke-opacity: 1; stroke-width: 6; }
+  100% { stroke-opacity: 0.6; stroke-width: 4; }
+}
+
 @keyframes pulse {
   0% { opacity: 0.8; }
   50% { opacity: 1; }
