@@ -1,0 +1,107 @@
+.resource-panel {
+    background-color: var(--panel-background);
+    border: 2px solid var(--belaklara-gold);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .resource-panel-title {
+    font-family: 'Black Chancery', serif;
+    color: var(--belaklara-gold);
+    margin: 0 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--belaklara-gold);
+    text-align: center;
+  }
+  
+  .player-resources {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .player-resource-section {
+    flex: 1;
+  }
+  
+  .player-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(204, 153, 51, 0.3);
+  }
+  
+  .player-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .player-A {
+    background-color: var(--royal-red);
+  }
+  
+  .player-B {
+    background-color: var(--belaklara-gold);
+  }
+  
+  .resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .resource-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+  }
+  
+  .resource-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+  
+  .gold-icon {
+    background-color: var(--belaklara-gold);
+    box-shadow: 0 0 5px var(--belaklara-gold);
+  }
+  
+  .resource-label {
+    font-weight: bold;
+    color: var(--divine-light);
+  }
+  
+  .resource-amount {
+    margin-left: auto;
+    font-weight: bold;
+    color: var(--divine-light);
+  }
+  
+  .player-A-resource .resource-amount {
+    color: var(--royal-red);
+  }
+  
+  .player-B-resource .resource-amount {
+    color: var(--belaklara-gold);
+  }
+  
+  .resource-info {
+    font-size: 0.85rem;
+    color: var(--divine-light);
+    opacity: 0.8;
+    padding-top: 10px;
+    border-top: 1px solid rgba(204, 153, 51, 0.3);
+  }
+  
+  .resource-info p {
+    margin: 5px 0;
+  }

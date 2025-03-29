@@ -1,11 +1,12 @@
 import React from 'react';
 import { useGame } from '../game-logic/GameContext';
 import PhaseController from './PhaseController';
+import ResourcePanel from './ResourcePanel';
 import '../styles/GameStatus.css';
 
 const GameStatus: React.FC = () => {
   const { state } = useGame();
-  
+
   // Calculate territory control for each player
   const calculateTerritoryControl = () => {
     if (state.board.length === 0) return { A: 0, B: 0, Neutral: 0 };
@@ -51,6 +52,9 @@ const GameStatus: React.FC = () => {
       
       {/* Phase Controller component that handles phase transitions and descriptions */}
       <PhaseController />
+
+      {/* Resource Panel component */}
+      <ResourcePanel />
       
       <div className="status-section">
         <h3 className="status-section-title">Territory</h3>

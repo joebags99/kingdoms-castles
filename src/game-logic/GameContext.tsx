@@ -7,6 +7,10 @@ export interface GameState {
   currentPhase: GamePhase;
   turnNumber: number;
   board: Hex[];
+  resources: {
+    A: { gold: number },
+    B: { gold: number }
+  };
 }
 
 // Initial state for the game
@@ -15,12 +19,17 @@ const initialGameState: GameState = {
   currentPhase: GamePhase.Resource, // Game begins with Resource phase
   turnNumber: 1, // First turn
   board: [], // Empty board to start
+  resources: {
+    A: { gold: 0 },
+    B: { gold: 0 }
+  }
 };
 
 // Define the types of actions we can dispatch
 type GameAction = 
   | { type: 'NEXT_PHASE' }
   | { type: 'END_PHASE' }
+  | { type: 'COLLECT_RESOURCES' }
   | { type: 'SET_BOARD', payload: Hex[] }
   | { type: 'RESET_GAME' };
 
@@ -43,6 +52,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
       
+      // If we're entering the Resource phase, automatically collect resources
+      if (nextPhase === GamePhase.Resource) {
+        // First update the phase
+        const newState = {
+          ...state,
+          currentPhase: nextPhase,
+        };
+        
+        // Then collect resources by calling the reducer recursively
+        return gameReducer(newState, { type: 'COLLECT_RESOURCES' });
+      }
+      
       return {
         ...state,
         currentPhase: nextPhase,
@@ -52,6 +73,32 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case 'END_PHASE':
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
+
+      case 'COLLECT_RESOURCES': {
+        const player = state.currentPlayer;
+        
+        // Calculate how many gold resources the current player receives
+        // It equals the number of hexes with capitalOwner = current player
+        const capitalHexes = state.board.filter(hex => hex.capitalOwner === player).length;
+        
+        // Resource gain depends on turn number, capped at 6
+        const resourceGain = Math.min(state.turnNumber, 6);
+        
+        // Calculate new gold amount, capped at 20
+        const currentGold = state.resources[player].gold;
+        const newGold = Math.min(currentGold + resourceGain, 20);
+        
+        return {
+          ...state,
+          resources: {
+            ...state.resources,
+            [player]: { 
+              ...state.resources[player],
+              gold: newGold
+            }
+          }
+        };
+      }
       
     case 'SET_BOARD':
       return {
