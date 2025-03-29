@@ -249,8 +249,11 @@ const Board: React.FC = () => {
   
   // Execute all planned attacks
   const executeAttacks = () => {
+    console.log(`Executing ${attacks.length} planned attacks`);
+    
     // Actually execute the attacks when ending the combat phase
     attacks.forEach(attack => {
+      console.log(`Executing attack from ${attack.attackerId} to ${attack.defenderId}`);
       dispatch({
         type: 'ATTACK_UNIT',
         payload: { attackerId: attack.attackerId, defenderId: attack.defenderId }
@@ -264,6 +267,7 @@ const Board: React.FC = () => {
   // When ending the combat phase, execute all attacks
   useEffect(() => {
     if (state.currentPhase !== GamePhase.Combat && attacks.length > 0) {
+      console.log("Phase changed from Combat - executing attacks");
       executeAttacks();
     }
   }, [state.currentPhase]);

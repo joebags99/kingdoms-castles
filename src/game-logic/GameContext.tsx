@@ -296,7 +296,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       };
     }
       
-      // For combat between units
+     // src/game-logic/GameContext.tsx
+// Modify the ATTACK_UNIT case to remove the phase check:
+
 case 'ATTACK_UNIT': {
   const { attackerId, defenderId } = action.payload;
   
@@ -310,11 +312,11 @@ case 'ATTACK_UNIT': {
     return state;
   }
   
-  // Verify we're in combat phase
-  if (state.currentPhase !== GamePhase.Combat) {
-    console.log(`Cannot attack: not in combat phase`);
-    return state;
-  }
+  // REMOVE THIS CHECK:
+  // if (state.currentPhase !== GamePhase.Combat) {
+  //   console.log(`Cannot attack: not in combat phase`);
+  //   return state;
+  // }
   
   // Verify attacker belongs to current player
   if (attacker.owner !== state.currentPlayer) {

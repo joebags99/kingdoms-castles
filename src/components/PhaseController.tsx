@@ -18,9 +18,10 @@ const PhaseController: React.FC = () => {
     
     // If we're in Combat phase, wait a moment to allow combat resolution
     if (state.currentPhase === GamePhase.Combat) {
-      // First dispatch an END_PHASE action (which won't change phases but will resolve combat)
-      dispatch({ type: 'END_COMBAT' });
-      
+      // We'll directly proceed to the next phase, but the Board component
+      // will handle executing attacks as part of its phase change detection
+      console.log("Ending combat phase - attacks will resolve");
+            
       // Then after a short delay, move to the next phase
       setTimeout(() => {
         dispatch({ type: 'NEXT_PHASE' });
