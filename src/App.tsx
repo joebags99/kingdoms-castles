@@ -1,9 +1,11 @@
+// src/App.tsx
 import { GameProvider } from './game-logic/GameContext'
 import GameStatus from './components/GameStatus'
 import Board from './components/Board'
 import CapitalSetup from './components/CapitalSetup'
 import GameStart from './components/GameStart'
 import RestartButton from './components/RestartButton'
+import HandPanel from './components/HandPanel'
 import './styles/Global.css'
 
 function App() {
@@ -27,6 +29,8 @@ function App() {
               <CapitalSetup />
             </div>
             <Board />
+            {/* Add HandPanel directly under the Board inside right-panel */}
+            <HandPanel />
           </div>
         </div>
       </div>

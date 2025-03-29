@@ -11,6 +11,18 @@ const PhaseController: React.FC = () => {
   const handleNextPhase = () => {
     console.log("Moving to next phase from", state.currentPhase);
     
+    // If we're in the Draw phase, draw a card before leaving
+    if (state.currentPhase === GamePhase.Draw) {
+      console.log("Drawing a card as player leaves Draw phase");
+      dispatch({ type: 'DRAW_CARD' });
+      
+      // Add a short delay before changing phases
+      setTimeout(() => {
+        dispatch({ type: 'NEXT_PHASE' });
+      }, 300);
+      return;
+    }
+    
     // If we're leaving the Resource phase, show a message about collecting resources
     if (state.currentPhase === GamePhase.Resource) {
       console.log("Collecting resources as player leaves Resource phase");
@@ -18,10 +30,9 @@ const PhaseController: React.FC = () => {
     
     // If we're in Combat phase, wait a moment to allow combat resolution
     if (state.currentPhase === GamePhase.Combat) {
-      // We'll directly proceed to the next phase, but the Board component
-      // will handle executing attacks as part of its phase change detection
-      console.log("Ending combat phase - attacks will resolve");
-            
+      // First dispatch an END_PHASE action (which won't change phases but will resolve combat)
+      dispatch({ type: 'END_COMBAT' });
+      
       // Then after a short delay, move to the next phase
       setTimeout(() => {
         dispatch({ type: 'NEXT_PHASE' });

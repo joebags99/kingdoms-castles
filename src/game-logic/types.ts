@@ -11,3 +11,23 @@ export interface Unit {
   hp: number;        // Hit Points
   hasMoved?: boolean; // Flag to track if unit has moved this turn
 }
+
+// src/game-logic/types.ts - Add to the end of the file
+export interface Card {
+    id: string;
+    name: string;
+    cost: number;
+    type: 'unit' | 'resource' | 'spell' | 'building';
+    subtype?: string;
+    effect: string;
+    description: string;
+    // Additional properties specific to card types
+    unitStats?: {
+      ap: number;
+      hp: number;
+    };
+    resourceAmount?: number;
+  }
+  
+  // Update the Player type
+  export type PlayerID = 'A' | 'B';

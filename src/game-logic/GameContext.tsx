@@ -3,7 +3,8 @@
 import React, { createContext, useReducer, useContext, ReactNode } from 'react';
 import { Hex, getAdjacentHexes } from './board'; // Import Hex and getAdjacentHexes
 import { GamePhase, Player } from './constants';
-import { Unit } from './types';
+import { Unit, Card } from './types';
+import { createPlayerDeck } from '../data/cards';
 
 export interface GameState {
   currentPlayer: Player;
@@ -20,11 +21,21 @@ export interface GameState {
   gameStarted: boolean;
   setupComplete: boolean;
   resourcesCollectedThisTurn: boolean;
-  units: Unit[]; // Add this line to track units
-  selectedUnit: string | null; // Add this to track the currently selected unit
+  units: Unit[];
+  selectedUnit: string | null;
+  // Add these new properties
+  decks: {
+    A: Card[];
+    B: Card[];
+  };
+  hands: {
+    A: Card[];
+    B: Card[];
+  };
+  selectedCard: string | null;
 }
 
-// Update initialGameState to include empty units array and selectedUnit
+// Update initialGameState to include empty decks and hands
 const initialGameState: GameState = {
   currentPlayer: 'A',
   currentPhase: GamePhase.Setup,
@@ -40,8 +51,18 @@ const initialGameState: GameState = {
   gameStarted: false,
   setupComplete: false,
   resourcesCollectedThisTurn: false,
-  units: [], // Initialize empty units array
-  selectedUnit: null // Initialize with no selected unit
+  units: [],
+  selectedUnit: null,
+  // Add these new properties
+  decks: {
+    A: [],
+    B: []
+  },
+  hands: {
+    A: [],
+    B: []
+  },
+  selectedCard: null
 };
 
 // In src/game-logic/GameContext.tsx, update the GameAction type definition:
@@ -49,7 +70,7 @@ const initialGameState: GameState = {
 type GameAction = 
   | { type: 'NEXT_PHASE' }
   | { type: 'END_PHASE' }
-  | { type: 'END_COMBAT' } // Add this line
+  | { type: 'END_COMBAT' } 
   | { type: 'SET_BOARD', payload: Hex[] }
   | { type: 'RESET_GAME', payload?: { startingPlayer: Player } }
   | { type: 'START_GAME', payload: { startingPlayer: Player } }
@@ -57,8 +78,10 @@ type GameAction =
   | { type: 'DEPLOY_UNIT', payload: { q: number, r: number, ap: number, hp: number } }
   | { type: 'SELECT_UNIT', payload: string | null }
   | { type: 'MOVE_UNIT', payload: { unitId: string, q: number, r: number } }
-  | { type: 'ATTACK_UNIT', payload: { attackerId: string, defenderId: string } }; // Add this line
-  
+  | { type: 'ATTACK_UNIT', payload: { attackerId: string, defenderId: string } }
+  | { type: 'DRAW_CARD' }
+  | { type: 'SELECT_CARD', payload: string | null }
+  | { type: 'PLAY_CARD', payload: { cardId: string, targetHex?: { q: number, r: number } } };
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -384,20 +407,32 @@ case 'ATTACK_UNIT': {
         board: action.payload,
       };
     
-    case 'START_GAME': {
-      console.log(`Starting game with player ${action.payload.startingPlayer} going first`);
-      
-      // Set up the initial game state with the specified starting player
-      return {
-        ...state,
-        currentPlayer: action.payload.startingPlayer,
-        gameStarted: true,
-        resources: {
-          A: { gold: 0 },
-          B: { gold: 0 }
-        }
-      };
-    }
+      case 'START_GAME': {
+        console.log(`Starting game with player ${action.payload.startingPlayer} going first`);
+        
+        // Create initial decks for both players
+        const deckA = createPlayerDeck('A');
+        const deckB = createPlayerDeck('B');
+        
+        // Set up the initial game state with the specified starting player
+        return {
+          ...state,
+          currentPlayer: action.payload.startingPlayer,
+          gameStarted: true,
+          resources: {
+            A: { gold: 0 },
+            B: { gold: 0 }
+          },
+          decks: {
+            A: deckA,
+            B: deckB
+          },
+          hands: {
+            A: [],
+            B: []
+          }
+        };
+      }
     
     case 'COMPLETE_SETUP': {
       console.log("Setup complete, moving to main game phases");
@@ -442,6 +477,150 @@ case 'ATTACK_UNIT': {
         // Mark that resources have been collected this turn
         resourcesCollectedThisTurn: true
       };
+    }
+
+    case 'DRAW_CARD': {
+      const player = state.currentPlayer;
+      const playerDeck = state.decks[player];
+      
+      // Check if there are cards in the deck
+      if (playerDeck.length === 0) {
+        console.log(`Player ${player}'s deck is empty, cannot draw`);
+        return state;
+      }
+      
+      // Draw the top card from the deck
+      const drawnCard = playerDeck[0];
+      const newDeck = playerDeck.slice(1); // Remove the top card
+      
+      console.log(`Player ${player} draws: ${drawnCard.name}`);
+      
+      // Add the card to the player's hand
+      return {
+        ...state,
+        decks: {
+          ...state.decks,
+          [player]: newDeck
+        },
+        hands: {
+          ...state.hands,
+          [player]: [...state.hands[player], drawnCard]
+        }
+      };
+    }
+    
+    case 'SELECT_CARD': {
+      return {
+        ...state,
+        selectedCard: action.payload
+      };
+    }
+    
+    case 'PLAY_CARD': {
+      const { cardId, targetHex } = action.payload;
+      const player = state.currentPlayer;
+      
+      // Find the card in the player's hand
+      const cardIndex = state.hands[player].findIndex(card => card.id === cardId);
+      if (cardIndex === -1) {
+        console.log(`Card ${cardId} not found in player ${player}'s hand`);
+        return state;
+      }
+      
+      const card = state.hands[player][cardIndex];
+      
+      // Check if the player has enough resources to play the card
+      if (state.resources[player].gold < card.cost) {
+        console.log(`Not enough gold to play ${card.name}`);
+        return state;
+      }
+      
+      // Handle card effects based on card type
+      let updatedState = {
+        ...state,
+        // Remove the card from hand
+        hands: {
+          ...state.hands,
+          [player]: [
+            ...state.hands[player].slice(0, cardIndex),
+            ...state.hands[player].slice(cardIndex + 1)
+          ]
+        },
+        // Deduct the cost
+        resources: {
+          ...state.resources,
+          [player]: {
+            ...state.resources[player],
+            gold: state.resources[player].gold - card.cost
+          }
+        },
+        // Clear the selected card
+        selectedCard: null
+      };
+      
+      // Apply card effects based on type
+      switch (card.type) {
+        case 'unit': {
+          // Deploy a unit if target hex is provided
+          if (targetHex) {
+            // Check if the hex is valid for deployment
+            const targetHexObj = state.board.find(h => h.q === targetHex.q && h.r === targetHex.r);
+            const isOccupied = state.units.some(u => u.q === targetHex.q && u.r === targetHex.r);
+            
+            if (targetHexObj && targetHexObj.zone === player && !isOccupied) {
+              const newUnit: Unit = {
+                id: `unit-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                owner: player,
+                q: targetHex.q,
+                r: targetHex.r,
+                ap: card.unitStats?.ap || 2, // Default if not specified
+                hp: card.unitStats?.hp || 3,
+                hasMoved: false
+              };
+              
+              updatedState = {
+                ...updatedState,
+                units: [...updatedState.units, newUnit]
+              };
+              
+              console.log(`Deployed ${card.name} at (${targetHex.q}, ${targetHex.r})`);
+            } else {
+              console.log(`Invalid target hex for unit deployment`);
+              return state; // Don't play the card if target is invalid
+            }
+          } else {
+            console.log(`No target hex provided for unit deployment`);
+            return state; // Don't play the card if no target
+          }
+          break;
+        }
+        
+        case 'resource': {
+          // Add resources
+          const goldToAdd = card.resourceAmount || 0;
+          updatedState = {
+            ...updatedState,
+            resources: {
+              ...updatedState.resources,
+              [player]: {
+                ...updatedState.resources[player],
+                gold: Math.min(updatedState.resources[player].gold + goldToAdd, 20) // Cap at 20
+              }
+            }
+          };
+          
+          console.log(`Added ${goldToAdd} gold from ${card.name}`);
+          break;
+        }
+        
+        case 'building':
+        case 'spell':
+          // These will be implemented later
+          console.log(`Played ${card.type} card: ${card.name}`);
+          break;
+      }
+      
+      return updatedState;
     }
       
     case 'RESET_GAME': {

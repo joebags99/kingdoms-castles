@@ -3,7 +3,7 @@
 /* ====== Main Board Layout ====== */
 .board-container {
   width: 100%;
-  height: 70vh;
+  height: 60vh; /* Reduce height slightly to make room for hand panel */
   background-color: var(--battle-ash);
   border: 2px solid var(--belaklara-gold);
   border-radius: 8px;
@@ -197,7 +197,7 @@
 /* ====== Responsive Adjustments ====== */
 @media (max-height: 700px) {
   .board-container {
-    height: 60vh;
+    height: 50vh;
   }
 }
 

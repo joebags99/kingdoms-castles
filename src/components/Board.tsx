@@ -153,72 +153,101 @@ const Board: React.FC = () => {
   };
 
   // Handle hex click based on current phase
-  const handleHexClick = (hex: Hex) => {
-    const { q, r } = hex;
+  // src/components/Board.tsx - Complete revised handleHexClick function
+const handleHexClick = (hex: Hex) => {
+  const { q, r } = hex;
+  
+  // If we're in a development phase and have a unit card selected, try to place it
+  if ((state.currentPhase === GamePhase.Dev1 || state.currentPhase === GamePhase.Dev2) && 
+      state.selectedCard) {
     
-    // Setup phase - toggle resource generation for capital hexes
-    if (state.currentPhase === GamePhase.Setup && hex.capitalOwner) {
-      const updatedBoard = toggleResourceGeneration(state.board, q, r);
-      dispatch({ type: 'SET_BOARD', payload: updatedBoard });
-      return;
-    }
+    const selectedCard = state.hands[state.currentPlayer].find(card => card.id === state.selectedCard);
     
-    // Development phases - deploy units
-    if ((state.currentPhase === GamePhase.Dev1 || state.currentPhase === GamePhase.Dev2) && 
-        hex.zone === state.currentPlayer) {
+    if (selectedCard && selectedCard.type === 'unit') {
+      // Check if the hex is in player territory and not occupied
+      const isPlayerTerritory = hex.zone === state.currentPlayer;
       const isOccupied = state.units.some(unit => unit.q === q && unit.r === r);
-      if (!isOccupied) {
-        dispatch({ 
-          type: 'DEPLOY_UNIT', 
-          payload: { q, r, ap: 3, hp: 5 }
-        });
-      }
-      return;
-    }
-    
-    // Movement phase - move selected unit
-    if (state.currentPhase === GamePhase.Movement && state.selectedUnit) {
-      const selectedUnitObj = state.units.find(unit => unit.id === state.selectedUnit);
-      if (selectedUnitObj && selectedUnitObj.owner === state.currentPlayer) {
+      
+      if (isPlayerTerritory && !isOccupied) {
+        // Dispatch an action to play the card at this location
         dispatch({
-          type: 'MOVE_UNIT',
-          payload: { unitId: state.selectedUnit, q, r }
+          type: 'PLAY_CARD',
+          payload: {
+            cardId: state.selectedCard,
+            targetHex: { q, r }
+          }
         });
+        return;
+      } else {
+        console.log('Cannot deploy unit here');
+        return;
+      }
+    }
+  }
+  
+  // Setup phase - toggle resource generation for capital hexes
+  if (state.currentPhase === GamePhase.Setup && hex.capitalOwner) {
+    const updatedBoard = toggleResourceGeneration(state.board, q, r);
+    dispatch({ type: 'SET_BOARD', payload: updatedBoard });
+    return;
+  }
+  
+  // Development phases - deploy units
+  if ((state.currentPhase === GamePhase.Dev1 || state.currentPhase === GamePhase.Dev2) && 
+      hex.zone === state.currentPlayer) {
+    const isOccupied = state.units.some(unit => unit.q === q && unit.r === r);
+    if (!isOccupied) {
+      dispatch({ 
+        type: 'DEPLOY_UNIT', 
+        payload: { q, r, ap: 3, hp: 5 }
+      });
+    }
+    return;
+  }
+  
+  // Movement phase - move selected unit
+  if (state.currentPhase === GamePhase.Movement && state.selectedUnit) {
+    const selectedUnitObj = state.units.find(unit => unit.id === state.selectedUnit);
+    if (selectedUnitObj && selectedUnitObj.owner === state.currentPlayer) {
+      dispatch({
+        type: 'MOVE_UNIT',
+        payload: { unitId: state.selectedUnit, q, r }
+      });
+    }
+    return;
+  }
+  
+  // Combat phase - select unit for attack
+  if (state.currentPhase === GamePhase.Combat) {
+    const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+    
+    // If clicking on one of our units, select it
+    if (unitInHex && unitInHex.owner === state.currentPlayer) {
+      setPendingAttack(null);
+      dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
+      return;
+    }
+    
+    // If a unit is selected and clicking on an enemy unit
+    if (state.selectedUnit && unitInHex && unitInHex.owner !== state.currentPlayer) {
+      // Check if this is a valid attack target
+      if (attackableUnits.includes(unitInHex.id)) {
+        setPendingAttack(unitInHex.id);
       }
       return;
     }
     
-    // Combat phase - select unit for attack
-    if (state.currentPhase === GamePhase.Combat) {
-      const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
-      
-      // If clicking on one of our units, select it
-      if (unitInHex && unitInHex.owner === state.currentPlayer) {
-        setPendingAttack(null);
-        dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
-        return;
-      }
-      
-      // If a unit is selected and clicking on an enemy unit
-      if (state.selectedUnit && unitInHex && unitInHex.owner !== state.currentPlayer) {
-        // Check if this is a valid attack target
-        if (attackableUnits.includes(unitInHex.id)) {
-          setPendingAttack(unitInHex.id);
-        }
-        return;
-      }
-      
-      // Clear pending attack if clicking empty hex
-      setPendingAttack(null);
-    }
-    
-    // Select hex/unit in other phases
-    setSelectedHex({ q, r });
-    const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
-    if (unitInHex && (unitInHex.owner === state.currentPlayer || state.currentPhase === GamePhase.Combat)) {
-      dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
-    }
-  };
+    // Clear pending attack if clicking empty hex
+    setPendingAttack(null);
+  }
+  
+  // Select hex/unit in other phases
+  setSelectedHex({ q, r });
+  const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
+  if (unitInHex && (unitInHex.owner === state.currentPlayer || state.currentPhase === GamePhase.Combat)) {
+    dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
+  }
+};
 
   // Confirm an attack
   const confirmAttack = () => {
