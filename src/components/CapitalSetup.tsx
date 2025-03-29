@@ -7,15 +7,22 @@ const CapitalSetup: React.FC = () => {
   const { state, dispatch } = useGame();
   
   const setupCapitals = () => {
-    // Find a good position for player A's capital (left side of the board)
-    const playerACapitalQ = 2;  // Left side of the board
-    const playerACapitalR = 3;  // Middle row approximately
-    
-    // Find a good position for player B's capital (right side of the board)
     const boardWidth = state.board.length > 0 ? 
       Math.max(...state.board.map(hex => hex.q)) + 1 : 15;
-    const playerBCapitalQ = boardWidth - 3;  // Right side of the board
-    const playerBCapitalR = 3;  // Middle row approximately
+    const boardHeight = state.board.length > 0 ? 
+      Math.max(...state.board.map(hex => hex.r)) + 1 : 8;
+    
+    // Calculate player territory sizes
+    const borderlands = 2;
+    const playerRows = (boardHeight - borderlands) / 2;
+    
+    // Place Player A's capital (in Player A territory)
+    const playerACapitalQ = Math.floor(boardWidth / 2);  // Middle column
+    const playerACapitalR = Math.floor(playerRows / 2);  // Middle of Player A territory
+    
+    // Place Player B's capital (in Player B territory)
+    const playerBCapitalQ = Math.floor(boardWidth / 2);  // Middle column
+    const playerBCapitalR = Math.floor(playerRows + borderlands + playerRows / 2);  // Middle of Player B territory
     
     // Place Player A's capital
     let updatedBoard = placeCapital(state.board, "A", playerACapitalQ, playerACapitalR);

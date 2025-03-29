@@ -42,13 +42,13 @@ const Board: React.FC = () => {
     };
   };
   
-  // Generate the board when component mounts
-  useEffect(() => {
-    const boardWidth = 15;
-    const boardHeight = 7;
-    const newBoard = generateBoard(boardWidth, boardHeight);
-    dispatch({ type: 'SET_BOARD', payload: newBoard });
-  }, [dispatch]);
+// Generate the board when component mounts with balanced layout
+useEffect(() => {
+  const boardWidth = 15;  // Horizontal extent (columns)
+  const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
+  const newBoard = generateBoard(boardWidth, boardHeight);
+  dispatch({ type: 'SET_BOARD', payload: newBoard });
+}, [dispatch]);
   
   // Adjust hex size when window or container resizes
   useEffect(() => {
@@ -59,9 +59,10 @@ const Board: React.FC = () => {
       const containerWidth = boardContainerRef.current.clientWidth - 40;
       const containerHeight = boardContainerRef.current.clientHeight - 40;
       
-      // Calculate the horizontal and vertical span of the board in pixels
-      const horizontalSpan = (metrics.maxQ - metrics.minQ + 3) * 1.5;
-      const verticalSpan = (metrics.maxR - metrics.minR + 3) * Math.sqrt(3);
+      // Calculate the horizontal and vertical span for pointy-topped hexes
+      // Note: For pointy-topped hexes, the math is different
+      const horizontalSpan = (metrics.width + 1) * Math.sqrt(3) * hexSize;
+      const verticalSpan = (metrics.height + 1) * 1.5 * hexSize;
       
       // Calculate the maximum size that will fit
       const maxSizeForWidth = containerWidth / horizontalSpan;
@@ -99,11 +100,11 @@ const Board: React.FC = () => {
     }
   };
 
-  // Generate points for a hexagon shape
+  // Generate points for a hexagon shape (pointy-topped)
   const hexPoints = (size: number): string => {
     const points = [];
     for (let i = 0; i < 6; i++) {
-      const angle = 2 * Math.PI / 6 * i;
+      const angle = 2 * Math.PI / 6 * i + Math.PI/6; // Rotated 30 degrees for pointy-top
       const x = size * Math.cos(angle);
       const y = size * Math.sin(angle);
       points.push(`${x},${y}`);
@@ -113,15 +114,15 @@ const Board: React.FC = () => {
 
   const metrics = getBoardMetrics();
   
-  // Calculate padding to ensure all hexes are visible
-  const paddingX = hexSize * 2; 
-  const paddingY = hexSize * 2;
+  // Calculate padding with extra space for the rotated hexes
+  const paddingX = hexSize * 3;
+  const paddingY = hexSize * 3;
   
-  // Calculate SVG viewBox dimensions with generous padding
-  const minX = metrics.minQ * hexSize * 1.5 - paddingX;
-  const minY = metrics.minR * hexSize * Math.sqrt(3) - paddingY;
-  const width = (metrics.maxQ - metrics.minQ + 2) * hexSize * 1.5 + 2 * paddingX;
-  const height = (metrics.maxR - metrics.minR + 2) * hexSize * Math.sqrt(3) + 2 * paddingY;
+  // Calculate SVG viewBox dimensions for pointy-topped hexes
+  const minX = Math.sqrt(3) * hexSize * metrics.minQ - paddingX;
+  const minY = 1.5 * hexSize * metrics.minR - paddingY;
+  const width = Math.sqrt(3) * hexSize * (metrics.width + 2) + 2 * paddingX;
+  const height = 1.5 * hexSize * (metrics.height + 2) + 2 * paddingY;
 
   return (
     <div className="board-container" ref={boardContainerRef}>
@@ -149,7 +150,7 @@ const Board: React.FC = () => {
                 {hexSize > 15 && (
                   <text
                     x="0"
-                    y="2"
+                    y="0"
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fill="#FBFBD7" // Divine Light White for text

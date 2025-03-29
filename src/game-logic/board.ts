@@ -9,39 +9,40 @@ export interface Hex {
 }
   
   /**
-   * Generates a hexagonal board with the specified dimensions
-   * @param width Number of columns in the grid
-   * @param height Number of rows in the grid
-   * @returns Array of Hex objects representing the board
-   */
-  export function generateBoard(width: number, height: number): Hex[] {
-    const hexes: Hex[] = [];
-    const neutralZoneWidth = Math.floor(width / 5); // 20% of board width for neutral zone
-    
-    // For each row and column, create a hex
+ * Generates a hexagonal board with the specified dimensions
+ * @param width Number of columns in the grid
+ * @param height Number of rows in the grid
+ * @returns Array of Hex objects representing the board
+ */
+export function generateBoard(width: number, height: number): Hex[] {
+  const hexes: Hex[] = [];
+  const borderlands = 2; // 2 rows for borderlands
+  const playerRows = (height - borderlands) / 2; // Equal rows for each player
+  
+  // For each row and column, create a hex with rotated orientation
+  for (let q = 0; q < width; q++) {
     for (let r = 0; r < height; r++) {
-      for (let q = 0; q < width; q++) {
-        // Determine the zone based on horizontal position
-        let zone: "A" | "Neutral" | "B";
-        if (q < (width - neutralZoneWidth) / 2) {
-          zone = "A";  // Left side of board
-        } else if (q >= (width + neutralZoneWidth) / 2) {
-          zone = "B";  // Right side of board
-        } else {
-          zone = "Neutral"; // Center neutral territory
-        }
-        
-        hexes.push({
-          id: `${q},${r}`,
-          q, 
-          r,
-          zone
-        });
+      // Determine the zone based on vertical position
+      let zone: "A" | "Neutral" | "B";
+      if (r < playerRows) {
+        zone = "A";  // Top side of board - Player A territory
+      } else if (r >= playerRows + borderlands) {
+        zone = "B";  // Bottom side of board - Player B territory
+      } else {
+        zone = "Neutral"; // Center neutral territory (borderlands)
       }
+      
+      hexes.push({
+        id: `${q},${r}`,
+        q, 
+        r,
+        zone
+      });
     }
-    
-    return hexes;
   }
+  
+  return hexes;
+}
   
  /**
  * Gets pixel coordinates for hexagon with specified axial coordinates
@@ -51,9 +52,9 @@ export interface Hex {
  * @returns {x, y} coordinates for positioning the hex
  */
 export function hexToPixel(q: number, r: number, size: number): {x: number, y: number} {
-  // Using flat-topped hexagon orientation
-  const x = size * (1.5 * q);
-  const y = size * (Math.sqrt(3) * (r + q/2));
+  // Using pointy-topped hexagon orientation (rotated 90 degrees from flat-topped)
+  const x = size * (Math.sqrt(3) * q + Math.sqrt(3)/2 * r);
+  const y = size * (3/2 * r);
   
   return {x, y};
 }
