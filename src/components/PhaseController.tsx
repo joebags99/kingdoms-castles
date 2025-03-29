@@ -111,8 +111,11 @@ const PhaseController: React.FC = () => {
     return state.currentPhase === GamePhase.Setup;
   };
   
+  // Determine if we should add the setup-phase class
+  const isSetupPhase = state.currentPhase === GamePhase.Setup;
+  
   return (
-    <div className="phase-controller">
+    <div className={`phase-controller ${isSetupPhase ? 'setup-phase' : ''}`}>
       <div className="phase-turn-info">
         <div className="turn-display">
           <span className="turn-label">Turn</span>
@@ -130,7 +133,20 @@ const PhaseController: React.FC = () => {
       </div>
       
       {state.currentPhase === GamePhase.Setup ? (
-        <SetupCompleteButton />
+        // Render the setup button directly instead of as a separate component
+        <div className="setup-area">
+          <button 
+            className="setup-complete-button"
+            onClick={() => dispatch({ type: 'COMPLETE_SETUP' })}
+            disabled={!state.board.some(hex => hex.capitalOwner === 'A') || 
+                    !state.board.some(hex => hex.capitalOwner === 'B')}
+          >
+            {state.board.some(hex => hex.capitalOwner === 'A') && 
+            state.board.some(hex => hex.capitalOwner === 'B') 
+              ? "Complete Setup & Start Game" 
+              : "Place Both Capitals to Continue"}
+          </button>
+        </div>
       ) : (
         <button 
           className="next-phase-button" 

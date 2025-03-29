@@ -15,7 +15,7 @@
   align-items: center;
   margin-top: 10px;
   overflow: hidden;
-  position: relative;
+  position: relative; /* This is important for absolute positioning */
 }
 
 .board-wrapper {
@@ -25,6 +25,7 @@
   justify-content: center;
   align-items: center;
   position: relative;
+  z-index: 1; /* Lower z-index than phase instructions */
 }
 
 .board {
@@ -46,7 +47,11 @@
   font-size: 0.9rem;
   color: var(--divine-light);
   text-align: center;
-  z-index: 10;
+  z-index: 5; /* Lower z-index so it doesn't overlap other elements */
+  max-width: 80%; /* Don't take up the full width */
+  margin: 0 auto; /* Center it horizontally */
+  border-radius: 4px; /* Rounded corners */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); /* Add shadow for better visibility */
 }
 
 /* ====== Hex Grid Elements ====== */
