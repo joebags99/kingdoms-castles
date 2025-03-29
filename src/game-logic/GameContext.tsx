@@ -20,8 +20,8 @@ const initialGameState: GameState = {
   turnNumber: 1, // First turn
   board: [], // Empty board to start
   resources: {
-    A: { gold: 0 },
-    B: { gold: 0 }
+    A: { gold: 5 },
+    B: { gold: 5 }
   }
 };
 
@@ -74,6 +74,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       // END_PHASE is the same as NEXT_PHASE in our implementation
       return gameReducer(state, { type: 'NEXT_PHASE' });
 
+      // In the 'COLLECT_RESOURCES' case of the gameReducer function
     case 'COLLECT_RESOURCES': {
       const player = state.currentPlayer;
       
@@ -82,19 +83,25 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         hex => hex.capitalOwner === player && hex.generateResource === true
       ).length;
       
-      // Resource gain per hex depends on turn number, capped at 6
-      const resourcePerHex = Math.min(state.turnNumber, 6);
+      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generating hexes`);
       
-      // Total resource gain (natural income)
-      const resourceGain = resourcePerHex;
+      // Even if there are no resource generators, give a minimum income
+      // This ensures players always get some resources
+      const baseIncome = 1;
+      
+      // Resource gain per hex depends on turn number, capped at 3
+      const resourcePerHex = Math.min(state.turnNumber, 3);
+      
+      // Calculate total resource gain
+      const resourceGain = baseIncome + (resourcePerHex * resourceGeneratingHexes);
       
       // Calculate new gold amount, capped at 20
       const currentGold = state.resources[player].gold;
       const newGold = Math.min(currentGold + resourceGain, 20);
       
-      console.log(`Player ${player} gains ${resourceGain} gold. Now has ${newGold} gold.`);
-      console.log(`Resource generating hexes: ${resourceGeneratingHexes}`);
+      console.log(`Player ${player} gold: ${currentGold} + ${resourceGain} = ${newGold}`);
       
+      // Create a new state object with updated resources
       return {
         ...state,
         resources: {

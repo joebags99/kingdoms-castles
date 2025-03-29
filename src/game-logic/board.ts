@@ -114,15 +114,11 @@ export function placeCapital(board: Hex[], owner: "A" | "B", capitalQ: number, c
     return board;
   }
   
-  // Check if the center hex is in the player's territory
-  if (centerHex.zone !== owner) {
-    console.warn(`Placing capital at (${capitalQ}, ${capitalR}) is outside player ${owner}'s territory`);
-    // We'll still place it, but warn about it
-  }
-  
   // Mark the center hex as part of the capital
   centerHex.capitalOwner = owner;
   centerHex.generateResource = false; // Center hex doesn't generate resources
+  
+  console.log(`Placed ${owner}'s capital center at (${capitalQ}, ${capitalR})`);
   
   // Get adjacent hexes and mark them as part of the capital
   const adjacentPositions = getAdjacentHexes(capitalQ, capitalR);
@@ -130,10 +126,17 @@ export function placeCapital(board: Hex[], owner: "A" | "B", capitalQ: number, c
   for (const pos of adjacentPositions) {
     const adjacentHex = findHexByCoordinates(newBoard, pos.q, pos.r);
     if (adjacentHex) {
+      console.log(`Setting adjacent hex at (${pos.q}, ${pos.r}) as part of ${owner}'s capital`);
       adjacentHex.capitalOwner = owner;
       adjacentHex.generateResource = true; // Adjacent hexes generate resources by default
     }
   }
+  
+  // Debug: Count how many resource generators were created
+  const resourceGenerators = newBoard.filter(
+    hex => hex.capitalOwner === owner && hex.generateResource === true
+  ).length;
+  console.log(`${owner} now has ${resourceGenerators} resource generating hexes`);
   
   return newBoard;
 }

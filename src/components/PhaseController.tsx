@@ -6,7 +6,15 @@ import '../styles/PhaseController.css';
 const PhaseController: React.FC = () => {
   const { state, dispatch } = useGame();
   
-  const handleNextPhase = () => {
+  // In the handleNextPhase function
+const handleNextPhase = () => {
+    console.log("Moving to next phase from", state.currentPhase);
+    
+    // If we're in End phase and about to cycle to Resource, log this special case
+    if (state.currentPhase === GamePhase.End) {
+      console.log("Completing turn cycle, collecting resources for next player");
+    }
+    
     dispatch({ type: 'NEXT_PHASE' });
   };
   
