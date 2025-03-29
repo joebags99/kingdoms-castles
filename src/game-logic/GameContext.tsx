@@ -420,8 +420,8 @@ case 'ATTACK_UNIT': {
           currentPlayer: action.payload.startingPlayer,
           gameStarted: true,
           resources: {
-            A: { gold: 0 },
-            B: { gold: 0 }
+            A: { gold: 10 },
+            B: { gold: 10 }
           },
           decks: {
             A: deckA,

@@ -485,35 +485,65 @@ const handleHexClick = (hex: Hex) => {
           x2={dx}
           y2={dy}
           stroke="#FF3333"
-          strokeWidth="2"
-          strokeDasharray="5,3"
-          opacity="0.8"
+          strokeWidth="3"
+          strokeDasharray="7,4"
+          opacity="0.9"
+          filter="url(#attackGlow)"
         />
         
-        {/* Single confirm button at midpoint */}
-        <g transform={`translate(${midX}, ${midY})`} onClick={confirmAttack} className="attack-confirm-button">
-          {/* Larger clickable area */}
-          <circle 
-            cx="0" 
-            cy="0" 
-            r="15" 
-            fill="#336633" 
-            stroke="#FFFFFF" 
-            strokeWidth="1.5"
-            style={{ cursor: 'pointer' }}
-          />
-          <text
-            x="0"
-            y="0"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#FFFFFF"
-            fontSize="14"
-            fontWeight="bold"
-            style={{ pointerEvents: 'none' }}
-          >
-            ✓
-          </text>
+        {/* Attack action buttons */}
+        <g transform={`translate(${midX}, ${midY})`}>
+          <g onClick={confirmAttack} className="attack-confirm-button" transform="translate(0, -20)">
+            {/* Confirm button */}
+            <circle 
+              cx="0" 
+              cy="0" 
+              r="18" 
+              fill="#006600" 
+              stroke="#FFFFFF" 
+              strokeWidth="2"
+              style={{ cursor: 'pointer' }}
+              filter="url(#unitShadow)"
+            />
+            <text
+              x="0"
+              y="1"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#FFFFFF"
+              fontSize="16"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none' }}
+            >
+              ✓
+            </text>
+          </g>
+          
+          {/* Cancel button */}
+          <g onClick={cancelAttack} className="attack-cancel-button" transform="translate(0, 20)">
+            <circle 
+              cx="0" 
+              cy="0" 
+              r="18" 
+              fill="#990000" 
+              stroke="#FFFFFF" 
+              strokeWidth="2"
+              style={{ cursor: 'pointer' }}
+              filter="url(#unitShadow)"
+            />
+            <text
+              x="0"
+              y="1"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#FFFFFF"
+              fontSize="16"
+              fontWeight="bold"
+              style={{ pointerEvents: 'none' }}
+            >
+              ✕
+            </text>
+          </g>
         </g>
       </g>
     );
@@ -575,6 +605,18 @@ const renderPhaseOverlay = () => {
       
       return (
         <g key={`attack-${index}`} className="planned-attack">
+          {/* Create a wider "hit area" for the line to make it easier to click */}
+          <line
+            x1={ax}
+            y1={ay}
+            x2={dx}
+            y2={dy}
+            stroke="transparent"
+            strokeWidth="15"
+            style={{ cursor: 'pointer' }}
+            onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
+          />
+          
           {/* Arrow line connecting attacker to defender */}
           <line
             x1={ax}
@@ -582,30 +624,37 @@ const renderPhaseOverlay = () => {
             x2={dx}
             y2={dy}
             stroke="#FF3333"
-            strokeWidth="2"
-            strokeDasharray="5,3"
+            strokeWidth="3"
+            strokeDasharray="7,4"
             markerEnd="url(#arrowhead)"
-            opacity="0.8"
+            opacity="0.9"
           />
           
-          {/* Numbered attack marker at midpoint */}
+          {/* Improved attack marker at midpoint */}
           <g transform={`translate(${midX}, ${midY})`}>
+            {/* White outline/glow for better visibility */}
             <circle 
-              r="12" 
-              fill="rgba(102, 0, 0, 0.8)" 
+              r="15" 
+              fill="white" 
+              opacity="0.8"
+            />
+            {/* Main attack indicator circle */}
+            <circle 
+              r="13" 
+              fill="#990000" 
               stroke="#FFFFFF" 
-              strokeWidth="1"
+              strokeWidth="1.5"
               onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
               style={{ cursor: 'pointer' }}
               className="attack-number"
             />
             <text
               x="0"
-              y="0"
+              y="1"
               textAnchor="middle"
               dominantBaseline="middle"
               fill="#FFFFFF"
-              fontSize="12"
+              fontSize="14"
               fontWeight="bold"
               style={{ pointerEvents: 'none' }}
             >
@@ -685,17 +734,24 @@ const renderPhaseOverlay = () => {
           <defs>
             <marker
               id="arrowhead"
-              markerWidth="7"  // Smaller marker
-              markerHeight="5" // Smaller marker
-              refX="7"         // Adjusted reference point
-              refY="2.5"       // Adjusted reference point
+              markerWidth="10"
+              markerHeight="8"
+              refX="8"
+              refY="4"
               orient="auto"
             >
-              <polygon points="0 0, 7 2.5, 0 5" fill="#FF0000" />
+              <polygon points="0 0, 10 4, 0 8" fill="#FF0000" />
             </marker>
             <filter id="unitShadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="black" floodOpacity="0.5" />
-              </filter>
+              <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="black" floodOpacity="0.5" />
+            </filter>
+            {/* Add a glow filter for attack indicators */}
+            <filter id="attackGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feFlood floodColor="#FF3333" floodOpacity="0.7" />
+              <feComposite in2="blur" operator="in" />
+              <feComposite in="SourceGraphic" />
+            </filter>
           </defs>
 
             {/* Phase overlay*/}
