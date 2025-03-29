@@ -1,0 +1,89 @@
+.phase-controller {
+    background-color: var(--panel-background);
+    border: 2px solid var(--belaklara-gold);
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .phase-turn-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--belaklara-gold);
+  }
+  
+  .turn-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .turn-label {
+    font-weight: bold;
+    color: var(--divine-light);
+  }
+  
+  .turn-number {
+    color: var(--belaklara-gold);
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  
+  .player-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+  }
+  
+  .player-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  
+  .player-A .player-dot {
+    background-color: var(--royal-red);
+  }
+  
+  .player-B .player-dot {
+    background-color: var(--belaklara-gold);
+  }
+  
+  .phase-info {
+    margin-bottom: 15px;
+  }
+  
+  .phase-name {
+    color: var(--belaklara-gold);
+    margin: 0 0 8px 0;
+    font-family: 'Black Chancery', serif;
+    font-size: 1.3rem;
+  }
+  
+  .phase-description {
+    color: var(--divine-light);
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  
+  .next-phase-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--royal-red);
+    color: var(--divine-light);
+    border: 2px solid var(--belaklara-gold);
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+  }
+  
+  .next-phase-button:hover {
+    background-color: #7F0000;
+    transform: translateY(-2px);
+  }

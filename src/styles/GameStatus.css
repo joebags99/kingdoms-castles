@@ -8,6 +8,7 @@
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
   }
   
   .game-status-panel h2 {
@@ -20,30 +21,41 @@
     padding-bottom: 8px;
   }
   
+  .status-section {
+    margin-bottom: 20px;
+  }
+  
+  .status-section-title {
+    font-family: 'Black Chancery', serif;
+    color: var(--belaklara-gold);
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(204, 153, 51, 0.3);
+  }
+  
   .status-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
-    margin-bottom: 15px;
-    flex-grow: 1;
+    gap: 8px;
   }
   
   .status-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 5px 0;
   }
   
   .status-label {
     font-weight: bold;
     color: var(--divine-light);
-    font-size: 1.1rem;
+    font-size: 0.9rem;
   }
   
   .status-value {
-    color: var(--belaklara-gold);
-    font-size: 1.1rem;
+    color: var(--divine-light);
+    font-size: 0.9rem;
   }
   
   .player-value {
@@ -54,8 +66,8 @@
   
   .player-indicator {
     display: inline-block;
-    width: 15px;
-    height: 15px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
   }
   
@@ -69,10 +81,4 @@
   
   .phase-value {
     font-style: italic;
-  }
-  
-  .next-phase-button {
-    width: 100%;
-    margin-top: auto;
-    padding: 10px;
   }

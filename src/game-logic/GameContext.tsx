@@ -1,9 +1,10 @@
 import React, { createContext, useReducer, useContext, ReactNode } from 'react';
 import { Hex } from './board'; // Import Hex from board.ts
+import { GamePhase } from './constants'; // Import the game phase enum
 
 export interface GameState {
   currentPlayer: 'A' | 'B';
-  currentPhase: 'Resource' | 'Draw' | 'Development' | 'Movement' | 'Combat' | 'Intrigue' | 'End';
+  currentPhase: GamePhase;
   turnNumber: number;
   board: Hex[];
 }
@@ -11,7 +12,7 @@ export interface GameState {
 // Initial state for the game
 const initialGameState: GameState = {
   currentPlayer: 'A', // Player A starts
-  currentPhase: 'Resource', // Game begins with Resource phase
+  currentPhase: GamePhase.Resource, // Game begins with Resource phase
   turnNumber: 1, // First turn
   board: [], // Empty board to start
 };
@@ -19,23 +20,21 @@ const initialGameState: GameState = {
 // Define the types of actions we can dispatch
 type GameAction = 
   | { type: 'NEXT_PHASE' }
-  | { type: 'NEXT_PLAYER' }
+  | { type: 'END_PHASE' }
   | { type: 'SET_BOARD', payload: Hex[] }
   | { type: 'RESET_GAME' };
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case 'NEXT_PHASE':
-      const phases: GameState['currentPhase'][] = [
-        'Resource', 'Draw', 'Development', 'Movement', 'Combat', 'Intrigue', 'End'
-      ];
+    case 'NEXT_PHASE': {
+      const phases = Object.values(GamePhase);
       const currentIndex = phases.indexOf(state.currentPhase);
       const nextIndex = (currentIndex + 1) % phases.length;
       const nextPhase = phases[nextIndex];
       
       // If we're going from End back to Resource, we change players and increment turn
-      if (nextPhase === 'Resource' && state.currentPhase === 'End') {
+      if (nextPhase === GamePhase.Resource && state.currentPhase === GamePhase.End) {
         return {
           ...state,
           currentPhase: nextPhase,
@@ -48,12 +47,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         currentPhase: nextPhase,
       };
+    }
       
-    case 'NEXT_PLAYER':
-      return {
-        ...state,
-        currentPlayer: state.currentPlayer === 'A' ? 'B' : 'A',
-      };
+    case 'END_PHASE':
+      // END_PHASE is the same as NEXT_PHASE in our implementation
+      return gameReducer(state, { type: 'NEXT_PHASE' });
       
     case 'SET_BOARD':
       return {
