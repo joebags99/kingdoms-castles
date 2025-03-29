@@ -3,17 +3,19 @@
 /* ====== Main Board Layout ====== */
 .board-container {
   width: 100%;
-  height: 60vh; /* Reduce height slightly to make room for hand panel */
+  height: 60vh;
   background-color: var(--battle-ash);
   border: 2px solid var(--belaklara-gold);
   border-radius: 8px;
   padding: 15px;
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   margin-top: 10px;
   overflow: hidden;
+  position: relative;
 }
 
 .board-wrapper {
@@ -34,15 +36,22 @@
 }
 
 .phase-instructions {
-  margin-top: 10px;
+  position: absolute;
+  bottom: 15px;
+  left: 0;
+  right: 0;
+  background-color: rgba(46, 43, 43, 0.9);
+  border-top: 1px solid var(--belaklara-gold);
+  padding: 8px;
   font-size: 0.9rem;
   color: var(--divine-light);
   text-align: center;
+  z-index: 10;
 }
 
 /* ====== Hex Grid Elements ====== */
 .hex {
-  transition: filter 0.3s ease;
+  transition: filter 0.2s ease;
   stroke-width: 1.5;
 }
 
@@ -54,26 +63,19 @@
 .hex-label {
   pointer-events: none;
   user-select: none;
-  opacity: 0.8;
+  opacity: 0.5;
+  font-size: 0.7em;
 }
 
 /* ====== Units ====== */
 .unit {
   cursor: pointer;
   pointer-events: all;
-}
-
-.unit circle:hover {
-  filter: brightness(1.2);
+  transition: all 0.2s ease;
 }
 
 .unit.selected {
   filter: drop-shadow(0 0 5px white);
-}
-
-.unit.selected circle {
-  stroke-width: 2px;
-  stroke: white;
 }
 
 /* Movement-related unit states */
@@ -129,6 +131,7 @@
   filter: drop-shadow(0 0 2px crimson);
 }
 
+/* Combat visuals */
 .attack-line {
   stroke: #FF3333;
   stroke-width: 2;
@@ -136,10 +139,19 @@
   marker-end: url(#arrowhead);
   opacity: 0.8;
   pointer-events: none;
+  filter: drop-shadow(0 0 3px #FF0000);
+}
+
+/* Add these animations for smoother effects */
+@keyframes appear {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .attack-confirmation {
+  animation: appear 0.2s ease-out forwards;
   filter: drop-shadow(0 0 5px #FF0000);
+
 }
 
 /* ====== Combat UI Elements ====== */
