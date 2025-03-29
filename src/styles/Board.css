@@ -78,9 +78,13 @@
   filter: drop-shadow(0 0 5px white);
 }
 
-/* Movement-related unit states */
 .unit.can-move {
   animation: pulse 1.5s infinite;
+}
+
+.unit.can-attack circle {
+  stroke: #ff0000;
+  stroke-width: 1.5px;
 }
 
 .move-indicator {
@@ -89,75 +93,36 @@
   animation: fade-pulse 1.5s infinite;
 }
 
-/* Combat-related unit states */
-.unit.can-attack {
-  cursor: pointer;
-}
-
-.unit.can-attack circle {
-  stroke: #ff0000;
-  stroke-width: 1.5px;
-}
-
-.unit.attackable {
-  filter: drop-shadow(0 0 3px #ff4500);
-}
-
-.unit.attack-target {
-  filter: drop-shadow(0 0 4px #ff0000);
-}
-
-/* ====== Combat Visuals ====== */
-.attack-indicator {
-  cursor: pointer;
-  pointer-events: all;
-  animation: blink 1.5s infinite;
-}
-
-.attack-glow {
-  filter: drop-shadow(0 0 5px #FF4500);
-  animation: pulse-glow 1.5s infinite;
-  pointer-events: none;
-}
-
-.attack-icon {
-  animation: float 2s infinite alternate;
-  transform-origin: center;
-  filter: drop-shadow(0 0 3px gold);
-}
-
-.attack-arrow {
-  animation: arrow-pulse 1s infinite;
-  filter: drop-shadow(0 0 2px crimson);
-}
-
-/* Combat visuals */
-.attack-line {
-  stroke: #FF3333;
-  stroke-width: 2;
-  stroke-dasharray: 5,3;
-  marker-end: url(#arrowhead);
-  opacity: 0.8;
-  pointer-events: none;
-  filter: drop-shadow(0 0 3px #FF0000);
-}
-
-/* Add these animations for smoother effects */
-@keyframes appear {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
+/* ====== Combat UI ====== */
 .attack-confirmation {
   animation: appear 0.2s ease-out forwards;
-  filter: drop-shadow(0 0 5px #FF0000);
-
+  opacity: 0.9;
+  transition: opacity 0.3s;
 }
 
-/* ====== Combat UI Elements ====== */
+.attack-confirmation:hover {
+  opacity: 1;
+}
+
+.planned-attack {
+  pointer-events: all;
+  opacity: 0.6;
+  transition: opacity 0.3s;
+}
+
+.planned-attack:hover {
+  opacity: 1;
+}
+
+.attack-confirm-button circle {
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.5));
+}
+
 .attack-confirm-button, 
 .attack-cancel-button {
   cursor: pointer;
+  transition: transform 0.2s;
+
 }
 
 .attack-confirm-button:hover,
@@ -166,8 +131,30 @@
   stroke-width: 1px;
 }
 
-.planned-attack {
-  pointer-events: all;
+/* ====== Combat Visual Effects ====== */
+.unit.attackable {
+  filter: drop-shadow(0 0 3px #ff4500);
+}
+
+.unit.attack-target {
+  filter: drop-shadow(0 0 4px #ff0000);
+}
+
+.unit.attack-target circle {
+  animation: pulse-target 1.5s infinite;
+}
+
+.unit.pending-target circle {
+  animation: pulse-pending 1.5s infinite;
+}
+
+.attack-line {
+  stroke: #FF3333;
+  stroke-width: 2;
+  stroke-dasharray: 5,3;
+  marker-end: url(#arrowhead);
+  opacity: 0.8;
+  pointer-events: none;
 }
 
 /* ====== Animations ====== */
@@ -183,37 +170,25 @@
   100% { opacity: 0.5; }
 }
 
-@keyframes blink {
-  0% { opacity: 0.3; }
-  50% { opacity: 1; }
-  100% { opacity: 0.3; }
+@keyframes pulse-target {
+  0% { stroke-width: 1; stroke: #FF3333; stroke-opacity: 0.7; }
+  50% { stroke-width: 3; stroke: #FF3333; stroke-opacity: 1; }
+  100% { stroke-width: 1; stroke: #FF3333; stroke-opacity: 0.7; }
 }
 
-@keyframes pulse-glow {
-  0% { opacity: 0.3; }
-  50% { opacity: 0.8; }
-  100% { opacity: 0.3; }
+@keyframes pulse-pending {
+  0% { stroke-width: 1; stroke: #FF9900; stroke-opacity: 0.7; }
+  50% { stroke-width: 3; stroke: #FF9900; stroke-opacity: 1; }
+  100% { stroke-width: 1; stroke: #FF9900; stroke-opacity: 0.7; }
 }
 
-@keyframes float {
-  0% { transform: translateY(0) scale(0.8); }
-  100% { transform: translateY(-5px) scale(0.8); }
-}
-
-@keyframes arrow-pulse {
-  0% { stroke-width: 3px; }
-  50% { stroke-width: 4px; }
-  100% { stroke-width: 3px; }
+@keyframes appear {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* ====== Responsive Adjustments ====== */
-@media (max-height: 700px) {
-  .board-container {
-    height: 50vh;
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-height: 700px), (max-width: 768px) {
   .board-container {
     height: 50vh;
   }

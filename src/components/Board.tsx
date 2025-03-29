@@ -221,8 +221,9 @@ const handleHexClick = (hex: Hex) => {
   if (state.currentPhase === GamePhase.Combat) {
     const unitInHex = state.units.find(unit => unit.q === q && unit.r === r);
     
-    // If clicking on one of our units, select it
+    // If clicking on one of our units, select it (auto-canceling any pending attack)
     if (unitInHex && unitInHex.owner === state.currentPlayer) {
+      // Automatically cancel any pending attack when selecting a new unit
       setPendingAttack(null);
       dispatch({ type: 'SELECT_UNIT', payload: unitInHex.id });
       return;
@@ -237,8 +238,9 @@ const handleHexClick = (hex: Hex) => {
       return;
     }
     
-    // Clear pending attack if clicking empty hex
+    // Clear pending attack and selection if clicking on empty hex
     setPendingAttack(null);
+    dispatch({ type: 'SELECT_UNIT', payload: null });
   }
   
   // Select hex/unit in other phases
@@ -302,121 +304,119 @@ const handleHexClick = (hex: Hex) => {
   }, [state.currentPhase]);
 
   // Function to render a unit on the board
-  // src/components/Board.tsx - Update the renderUnit function
-const renderUnit = (unit: any) => {
-  const { x, y } = hexToPixel(unit.q, unit.r, hexSize);
-  const isSelected = unit.id === state.selectedUnit;
-  const canMove = state.currentPhase === GamePhase.Movement && 
-                unit.owner === state.currentPlayer && 
-                !unit.hasMoved;
-  const canAttack = state.currentPhase === GamePhase.Combat &&
-                  unit.owner === state.currentPlayer &&
-                  !attacks.some(attack => attack.attackerId === unit.id);
-  const isAttackable = attackableUnits.includes(unit.id);
-  const isPendingTarget = unit.id === pendingAttack;
-  const isAttackTarget = attacks.some(attack => attack.defenderId === unit.id);
-  
-  // Determine colors based on player and state
-  const baseColor = unit.owner === 'A' ? '#990000' : '#FFCC00';
-  const strokeColor = isSelected ? '#FFFFFF' : 
-                     isPendingTarget ? '#FF0000' : 
-                     isAttackable ? '#FFFFFF' : '#000000';
-  const strokeWidth = isSelected || isPendingTarget ? 2 : 1;
-  
-  return (
-    <g 
-      key={`unit-${unit.id}`} 
-      transform={`translate(${x}, ${y})`}
-      className={`
-        unit 
-        ${isSelected ? 'selected' : ''} 
-        ${canMove ? 'can-move' : ''} 
-        ${canAttack ? 'can-attack' : ''} 
-        ${isAttackable ? 'attackable' : ''}
-        ${isPendingTarget ? 'pending-target' : ''}
-        ${isAttackTarget ? 'attack-target' : ''}
-      `}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (state.currentPhase === GamePhase.Combat) {
-          if (unit.owner === state.currentPlayer) {
-            // Select our unit
-            dispatch({ type: 'SELECT_UNIT', payload: unit.id });
-            setPendingAttack(null);
-          } else if (state.selectedUnit && attackableUnits.includes(unit.id)) {
-            // Select enemy as attack target
-            setPendingAttack(unit.id);
-          }
-        } else if (state.currentPhase === GamePhase.Movement && 
-                 unit.owner === state.currentPlayer) {
-          dispatch({ type: 'SELECT_UNIT', payload: unit.id });
-        }
-      }}
-    >
-      {/* Drop shadow for depth */}
-      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="0" stdDeviation="2" floodColor="black" floodOpacity="0.5" />
-      </filter>
+    const renderUnit = (unit: any) => {
+      const { x, y } = hexToPixel(unit.q, unit.r, hexSize);
+      const isSelected = unit.id === state.selectedUnit;
+      const canMove = state.currentPhase === GamePhase.Movement && 
+                    unit.owner === state.currentPlayer && 
+                    !unit.hasMoved;
+      const canAttack = state.currentPhase === GamePhase.Combat &&
+                      unit.owner === state.currentPlayer &&
+                      !attacks.some(attack => attack.attackerId === unit.id);
+      const isAttackable = attackableUnits.includes(unit.id);
+      const isPendingTarget = unit.id === pendingAttack;
+      const isAttackTarget = attacks.some(attack => attack.defenderId === unit.id);
       
-      {/* Main unit circle */}
-      <circle 
-        cx="0" 
-        cy="0" 
-        r={hexSize * 0.4} 
-        fill={baseColor} 
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-        filter="url(#shadow)"
-      />
+      // Determine colors based on player and state
+      const baseColor = unit.owner === 'A' ? '#990000' : '#FFCC00';
+      const glowColor = isPendingTarget ? '#FF3333' : 
+                      isAttackable ? '#FF9900' : 
+                      isSelected ? '#FFFFFF' : '';
       
-      {/* Unit stats display */}
-      <text 
-        x="0" 
-        y="0" 
-        textAnchor="middle" 
-        dominantBaseline="middle" 
-        fill="#FFFFFF" 
-        fontSize={hexSize * 0.28}
-        fontWeight="bold"
-        fontFamily="'Spectral', serif"
-        style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
-      >
-        {unit.ap}/{unit.hp}
-      </text>
-      
-      {/* Status indicators */}
-      {canMove && (
-        <circle 
-          cx={hexSize * 0.4 * 0.707} 
-          cy={hexSize * 0.4 * 0.707} 
-          r={hexSize * 0.1} 
-          fill="#00FF00" 
-          opacity="0.7"
-        />
-      )}
-      
-      {canAttack && (
-        <circle 
-          cx={-hexSize * 0.4 * 0.707} 
-          cy={hexSize * 0.4 * 0.707} 
-          r={hexSize * 0.1} 
-          fill="#FF0000" 
-          opacity="0.7"
-        />
-      )}
-      
-      {unit.hasMoved && (
-        <circle 
-          cx={0} 
-          cy={-hexSize * 0.4 * 0.8} 
-          r={hexSize * 0.1} 
-          fill="#888888" 
-          opacity="0.7"
-        />
-      )}
-    </g>
-  );
-};
+      return (
+        <g 
+          key={`unit-${unit.id}`} 
+          transform={`translate(${x}, ${y})`}
+          className={`
+            unit 
+            ${isSelected ? 'selected' : ''} 
+            ${canMove ? 'can-move' : ''} 
+            ${canAttack ? 'can-attack' : ''} 
+            ${isAttackable ? 'attackable' : ''}
+            ${isPendingTarget ? 'pending-target' : ''}
+            ${isAttackTarget ? 'attack-target' : ''}
+          `}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (state.currentPhase === GamePhase.Combat) {
+              if (unit.owner === state.currentPlayer) {
+                dispatch({ type: 'SELECT_UNIT', payload: unit.id });
+                setPendingAttack(null);
+              } else if (state.selectedUnit && attackableUnits.includes(unit.id)) {
+                setPendingAttack(unit.id);
+              }
+            } else if (state.currentPhase === GamePhase.Movement && 
+                    unit.owner === state.currentPlayer) {
+              dispatch({ type: 'SELECT_UNIT', payload: unit.id });
+            }
+          }}
+        >
+          {/* Glow effect for highlighting */}
+          {glowColor && (
+            <circle 
+              cx="0" 
+              cy="0" 
+              r={hexSize * 0.5} 
+              fill="none" 
+              stroke={glowColor}
+              strokeWidth="2"
+              opacity="0.7"
+            />
+          )}
+          
+          {/* Main unit circle */}
+          <circle 
+            cx="0" 
+            cy="0" 
+            r={hexSize * 0.4} 
+            fill={baseColor} 
+            stroke="#000000"
+            strokeWidth="1"
+            filter="url(#unitShadow)"
+          />
+          
+          {/* Unit stats display */}
+          <text 
+            x="0" 
+            y="0" 
+            textAnchor="middle" 
+            dominantBaseline="middle" 
+            fill="#FFFFFF" 
+            fontSize={hexSize * 0.28}
+            fontWeight="bold"
+            fontFamily="'Spectral', serif"
+            style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.7)" }}
+          >
+            {unit.ap}/{unit.hp}
+          </text>
+          
+          {/* Small status indicators */}
+          {canMove && (
+            <circle 
+              cx={hexSize * 0.3} 
+              cy={-hexSize * 0.3} 
+              r={hexSize * 0.08} 
+              fill="#00FF00" 
+              stroke="#FFFFFF"
+              strokeWidth="0.5"
+              opacity="0.9"
+            />
+          )}
+          
+          {canAttack && (
+            <circle 
+              cx={-hexSize * 0.3} 
+              cy={-hexSize * 0.3} 
+              r={hexSize * 0.08} 
+              fill="#FF0000"
+              stroke="#FFFFFF"
+              strokeWidth="0.5" 
+              opacity="0.9"
+            />
+          )}
+        </g>
+      );
+    };
   
   // Function to render movement indicators for selected unit
   const renderMoveIndicators = () => {
@@ -461,84 +461,63 @@ const renderUnit = (unit: any) => {
   };
   
   // Render attack confirmation UI
-  // src/components/Board.tsx - Update the renderAttackConfirmation function
-const renderAttackConfirmation = () => {
-  if (!pendingAttack || !state.selectedUnit) return null;
-  
-  const attacker = state.units.find(u => u.id === state.selectedUnit);
-  const defender = state.units.find(u => u.id === pendingAttack);
-  
-  if (!attacker || !defender) return null;
-  
-  const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
-  const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
-  
-  // Calculate midpoint for confirmation buttons
-  const mx = (ax + dx) / 2;
-  const my = (ay + dy) / 2;
-  
-  return (
-    <g className="attack-confirmation">
-      {/* Subtle attack line */}
-      <line
-        x1={ax}
-        y1={ay}
-        x2={dx}
-        y2={dy}
-        stroke="#FF3333"
-        strokeWidth="2"
-        strokeDasharray="5,3"
-        markerEnd="url(#arrowhead)"
-        opacity="0.7"
-      />
-      
-      {/* Improved confirmation UI */}
-      <g transform={`translate(${mx}, ${my})`}>
-        <rect 
-          x="-70" 
-          y="-20" 
-          width="140" 
-          height="40" 
-          rx="20" 
-          fill="rgba(0,0,0,0.8)" 
-          stroke="#FBFBD7"
+  const renderAttackConfirmation = () => {
+    if (!pendingAttack || !state.selectedUnit) return null;
+    
+    const attacker = state.units.find(u => u.id === state.selectedUnit);
+    const defender = state.units.find(u => u.id === pendingAttack);
+    
+    if (!attacker || !defender) return null;
+    
+    const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
+    const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
+    
+    // Find the midpoint between the two units for the confirmation button
+    const midX = (ax + dx) / 2;
+    const midY = (ay + dy) / 2;
+    
+    return (
+      <g className="attack-confirmation">
+        {/* Dashed line showing attack path */}
+        <line
+          x1={ax}
+          y1={ay}
+          x2={dx}
+          y2={dy}
+          stroke="#FF3333"
+          strokeWidth="2"
+          strokeDasharray="5,3"
+          opacity="0.8"
         />
         
-        {/* Confirm button */}
-        <g transform="translate(-35, 0)" onClick={confirmAttack} style={{ cursor: 'pointer' }}>
-          <rect x="-25" y="-12" width="50" height="24" rx="12" fill="#336633" />
+        {/* Single confirm button at midpoint */}
+        <g transform={`translate(${midX}, ${midY})`} onClick={confirmAttack} className="attack-confirm-button">
+          {/* Larger clickable area */}
+          <circle 
+            cx="0" 
+            cy="0" 
+            r="15" 
+            fill="#336633" 
+            stroke="#FFFFFF" 
+            strokeWidth="1.5"
+            style={{ cursor: 'pointer' }}
+          />
           <text
             x="0"
             y="0"
             textAnchor="middle"
             dominantBaseline="middle"
             fill="#FFFFFF"
-            fontSize="12"
-            fontFamily="'Spectral', serif"
+            fontSize="14"
+            fontWeight="bold"
+            style={{ pointerEvents: 'none' }}
           >
-            Attack
-          </text>
-        </g>
-        
-        {/* Cancel button */}
-        <g transform="translate(35, 0)" onClick={cancelAttack} style={{ cursor: 'pointer' }}>
-          <rect x="-25" y="-12" width="50" height="24" rx="12" fill="#663333" />
-          <text
-            x="0"
-            y="0"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fill="#FFFFFF"
-            fontSize="12"
-            fontFamily="'Spectral', serif"
-          >
-            Cancel
+            ✓
           </text>
         </g>
       </g>
-    </g>
-  );
-};
+    );
+  };
   
 const renderPhaseOverlay = () => {
   // Only show in certain phases
@@ -590,16 +569,18 @@ const renderPhaseOverlay = () => {
       const { x: ax, y: ay } = hexToPixel(attacker.q, attacker.r, hexSize);
       const { x: dx, y: dy } = hexToPixel(defender.q, defender.r, hexSize);
       
-      // Calculate perpendicular offset to curve the line
+      // Calculate midpoint for the attack marker
       const midX = (ax + dx) / 2;
       const midY = (ay + dy) / 2;
       
       return (
         <g key={`attack-${index}`} className="planned-attack">
-          {/* Curved attack path instead of straight line */}
-          <path
-            d={`M ${ax} ${ay} Q ${midX + 10} ${midY - 10}, ${dx} ${dy}`}
-            fill="none"
+          {/* Arrow line connecting attacker to defender */}
+          <line
+            x1={ax}
+            y1={ay}
+            x2={dx}
+            y2={dy}
             stroke="#FF3333"
             strokeWidth="2"
             strokeDasharray="5,3"
@@ -607,23 +588,28 @@ const renderPhaseOverlay = () => {
             opacity="0.8"
           />
           
-          {/* Clean cancel button */}
-          <g 
-            transform={`translate(${midX}, ${midY})`}
-            onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
-            style={{ cursor: 'pointer' }}
-          >
-            <circle r="10" fill="rgba(0,0,0,0.8)" stroke="#FBFBD7" strokeWidth="1" />
+          {/* Numbered attack marker at midpoint */}
+          <g transform={`translate(${midX}, ${midY})`}>
+            <circle 
+              r="12" 
+              fill="rgba(102, 0, 0, 0.8)" 
+              stroke="#FFFFFF" 
+              strokeWidth="1"
+              onClick={() => removeAttack(attack.attackerId, attack.defenderId)}
+              style={{ cursor: 'pointer' }}
+              className="attack-number"
+            />
             <text
               x="0"
               y="0"
               textAnchor="middle"
               dominantBaseline="middle"
               fill="#FFFFFF"
-              fontSize="14"
+              fontSize="12"
               fontWeight="bold"
+              style={{ pointerEvents: 'none' }}
             >
-              ×
+              {index + 1}
             </text>
           </g>
         </g>
@@ -699,14 +685,17 @@ const renderPhaseOverlay = () => {
           <defs>
             <marker
               id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="9"
-              refY="3.5"
+              markerWidth="7"  // Smaller marker
+              markerHeight="5" // Smaller marker
+              refX="7"         // Adjusted reference point
+              refY="2.5"       // Adjusted reference point
               orient="auto"
             >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#FF0000" />
+              <polygon points="0 0, 7 2.5, 0 5" fill="#FF0000" />
             </marker>
+            <filter id="unitShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="black" floodOpacity="0.5" />
+              </filter>
           </defs>
 
             {/* Phase overlay*/}
@@ -768,15 +757,14 @@ const renderPhaseOverlay = () => {
           <p>Select your unit, then click on an adjacent hex to move</p>
         ) : state.currentPhase === GamePhase.Combat ? (
           <>
-            <p>
-              {attacks.length > 0 
-                ? `${attacks.length} attack(s) planned. Select more units to plan additional attacks.` 
-                : hasAttackableUnits
-                  ? "Select your unit, then click on an adjacent enemy unit to attack"
-                  : "No more units available to attack. End phase to resolve combat."}
-            </p>
-            {attacks.length > 0 && (
-              <p><small>Attacks will be resolved when you end the combat phase</small></p>
+            {attacks.length > 0 ? (
+              <p>
+                {`${attacks.length} attack(s) planned. Select a unit to plan more attacks or click on attack markers to cancel.`}
+              </p>
+            ) : pendingAttack ? (
+              <p>Click the checkmark to confirm attack or select another unit to cancel.</p>
+            ) : (
+              <p>Select your unit, then click on an adjacent enemy unit to attack.</p>
             )}
           </>
         ) : null}
