@@ -2,6 +2,8 @@ import { GameProvider } from './game-logic/GameContext'
 import GameStatus from './components/GameStatus'
 import Board from './components/Board'
 import CapitalSetup from './components/CapitalSetup'
+import GameStart from './components/GameStart'
+import RestartButton from './components/RestartButton'
 import './styles/Global.css'
 
 function App() {
@@ -12,6 +14,8 @@ function App() {
           <h1>Kingdoms & Castles</h1>
         </header>
         
+        <GameStart />
+        
         <div className="game-layout">
           <div className="left-panel">
             <GameStatus />
@@ -19,6 +23,7 @@ function App() {
           
           <div className="right-panel">
             <div className="action-bar">
+              <RestartButton />
               <CapitalSetup />
             </div>
             <Board />

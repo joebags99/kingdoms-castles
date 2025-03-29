@@ -62,8 +62,8 @@ const ResourcePanel: React.FC = () => {
       </div>
       
       <div className="resource-info">
-        <p>Gold income: {Math.min(state.turnNumber, 6)} per turn</p>
-        <p>Active generators: A: {resourceGeneratorsA} | B: {resourceGeneratorsB}</p>
+        <p>Active generators: {Math.min(state.turnNumber, 6)} / 6 max</p>
+        <p>Resources: A: {Math.min(resourceGeneratorsA, state.turnNumber)} | B: {Math.min(resourceGeneratorsB, state.turnNumber)}</p>
         <p>Limit: 20 gold max</p>
       </div>
     </div>

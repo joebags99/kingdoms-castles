@@ -1,0 +1,56 @@
+.restart-button-container {
+    margin-right: 15px;
+  }
+  
+  .reset-button {
+    padding: 10px 20px;
+    background-color: var(--battle-ash);
+    color: var(--divine-light);
+    border: 2px solid var(--belaklara-gold);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Spectral', serif;
+    font-weight: bold;
+  }
+  
+  .reset-button:hover {
+    background-color: #3a3a3a;
+    transform: translateY(-2px);
+  }
+  
+  .confirm-buttons {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .confirm-yes, .confirm-no {
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: 'Spectral', serif;
+    transition: all 0.3s ease;
+  }
+  
+  .confirm-yes {
+    background-color: #d32f2f;
+    color: white;
+    border: 1px solid #b71c1c;
+  }
+  
+  .confirm-yes:hover {
+    background-color: #b71c1c;
+    transform: translateY(-2px);
+  }
+  
+  .confirm-no {
+    background-color: var(--battle-ash);
+    color: var(--divine-light);
+    border: 1px solid var(--belaklara-gold);
+  }
+  
+  .confirm-no:hover {
+    background-color: #3a3a3a;
+    transform: translateY(-2px);
+  }

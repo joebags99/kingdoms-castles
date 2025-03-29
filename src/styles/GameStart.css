@@ -1,0 +1,122 @@
+.game-start {
+    position: relative;
+    z-index: 10;
+  }
+  
+  .start-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(30, 30, 30, 0.9);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  
+  .start-screen h2 {
+    font-family: 'Black Chancery', serif;
+    font-size: 3rem;
+    color: var(--divine-light);
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  
+  .start-screen p {
+    color: var(--divine-light);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+  }
+  
+  .start-button {
+    margin-top: 2rem;
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    background-color: var(--royal-red);
+    color: var(--divine-light);
+    border: 2px solid var(--belaklara-gold);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Black Chancery', serif;
+  }
+  
+  .start-button:hover {
+    background-color: #7F0000;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+  
+  .reset-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    background-color: var(--battle-ash);
+    color: var(--divine-light);
+    border: 1px solid var(--belaklara-gold);
+    cursor: pointer;
+    z-index: 100;
+    margin-right: 10px;
+  }
+  
+  .reset-button:hover {
+    background-color: #3a3a3a;
+  }
+  
+  .dice-result {
+    margin-top: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .dice {
+    width: 80px;
+    height: 80px;
+    background-color: var(--divine-light);
+    color: var(--royal-red);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    font-weight: bold;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    animation: dice-roll 0.5s ease-out;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+  
+  @keyframes dice-roll {
+    0% {
+      transform: rotateZ(0deg);
+    }
+    25% {
+      transform: rotateZ(-15deg);
+    }
+    50% {
+      transform: rotateZ(10deg);
+    }
+    75% {
+      transform: rotateZ(-5deg);
+    }
+    100% {
+      transform: rotateZ(0deg);
+    }
+  }
+  
+  .dice-result p {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--belaklara-gold);
+    animation: fade-in 0.5s ease-in;
+  }
+  
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }

@@ -42,13 +42,16 @@ const Board: React.FC = () => {
     };
   };
   
-  // Generate the board when component mounts with balanced layout
+  // Generate the board when component mounts or when the board is empty
   useEffect(() => {
-    const boardWidth = 15;  // Horizontal extent (columns)
-    const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
-    const newBoard = generateBoard(boardWidth, boardHeight);
-    dispatch({ type: 'SET_BOARD', payload: newBoard });
-  }, [dispatch]);
+    // Only generate a new board if it's empty (initial load or after reset)
+    if (state.board.length === 0) {
+      const boardWidth = 15;  // Horizontal extent (columns)
+      const boardHeight = 8;  // Vertical extent (rows): 3 for Player A + 2 for borderlands + 3 for Player B
+      const newBoard = generateBoard(boardWidth, boardHeight);
+      dispatch({ type: 'SET_BOARD', payload: newBoard });
+    }
+  }, [dispatch, state.board.length]);
   
   // Adjust hex size when window or container resizes
   useEffect(() => {

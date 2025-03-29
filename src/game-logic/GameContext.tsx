@@ -33,7 +33,7 @@ type GameAction =
   | { type: 'END_PHASE' }
   | { type: 'COLLECT_RESOURCES' }
   | { type: 'SET_BOARD', payload: Hex[] }
-  | { type: 'RESET_GAME' };
+  | { type: 'RESET_GAME', payload?: { startingPlayer: 'A' | 'B' } };
 
 // Create the reducer function to handle state changes
 function gameReducer(state: GameState, action: GameAction): GameState {
@@ -50,7 +50,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         const newTurnNumber = newPlayer === 'A' ? state.turnNumber + 1 : state.turnNumber;
         
         // First update player and turn
-        const playerChangedState = {
+        const playerChangedState: GameState = {
           ...state,
           currentPhase: nextPhase,
           currentPlayer: newPlayer,
@@ -80,15 +80,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         hex => hex.capitalOwner === player && hex.generateResource === true
       ).length;
       
-      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generating hexes`);
+      // Limit active generators by turn number
+      // Turn 1 = 1 generator, Turn 2 = 2 generators, etc.
+      const activeGenerators = Math.min(resourceGeneratingHexes, state.turnNumber);
       
-      // Base income plus additional income based on active generators
-      const baseIncome = 1;
-      const resourcePerGenerator = Math.min(state.turnNumber, 3);
-      const additionalIncome = resourceGeneratingHexes > 0 ? resourceGeneratingHexes * resourcePerGenerator : 0;
+      console.log(`Player ${player} has ${resourceGeneratingHexes} resource generators, but only ${activeGenerators} are active in turn ${state.turnNumber}`);
       
-      // Calculate total resource gain
-      const resourceGain = baseIncome + additionalIncome;
+      // Each active generator provides 1 gold
+      const resourceGain = activeGenerators;
       
       // Calculate new gold amount, capped at 20
       const currentGold = state.resources[player].gold;
@@ -115,8 +114,26 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         board: action.payload,
       };
       
-    case 'RESET_GAME':
-      return initialGameState;
+    case 'RESET_GAME': {
+      // Create a fresh game state
+      const newState = {
+        ...initialGameState,
+        // Start with 0 resources instead of 5
+        resources: {
+          A: { gold: 0 },
+          B: { gold: 0 }
+        },
+        // Use the provided starting player or default to 'A'
+        currentPlayer: action.payload?.startingPlayer || 'A',
+        // Empty board
+        board: []
+      };
+      
+      // Log the reset
+      console.log(`Game reset. ${newState.currentPlayer === 'A' ? 'Player A' : 'Player B'} will go first.`);
+      
+      return newState;
+    }
       
     default:
       return state;
